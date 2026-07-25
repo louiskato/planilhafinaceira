@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Central Financeira</title>
 <meta name="theme-color" content="#141416">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Financeira">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="icon" href="/icons/icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -454,9 +458,16 @@ async function sbCarregarMes(ano, mes){
     dia.mov.push({ id:l.id, t:l.tipo, v, desc:l.nome||'', tag:l.tag_id||null });
   });
 
+  // sem abertura própria: herda o saldo final do mês anterior (se carregado)
+  let abertura = Number(abert.data?.valor ?? NaN);
+  if (Number.isNaN(abertura)) {
+    let py=ano, pm=mes-1; if(pm<1){pm=12;py--;}
+    const ant = D.meses[_k(py,pm)];
+    abertura = ant ? ant.dias[ant.dias.length-1].saldo : 0;
+  }
   D.meses[_k(ano,mes)] = {
     dias,
-    abertura: Number(abert.data?.valor ?? 0),
+    abertura,
     metaDia:  Number(meta.data?.meta_diaria  ?? 35),
     metaEco:  Number(meta.data?.meta_eco_pct ?? 0.25)
   };
@@ -604,7 +615,8 @@ function sbEscutar(aoMudar){
 
 <script>
 const AB=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-const HOJE={y:2026,m:7,d:22};
+const _hoje=new Date();
+const HOJE={y:_hoje.getFullYear(),m:_hoje.getMonth()+1,d:_hoje.getDate()};
 const CAT={
  entrada:{n:'entradas',s:'entrada',i:'E',ex:'salário, comissão, vales',c:'#4E9350'},
  saida:{n:'saídas',s:'saída',i:'S',ex:'gastos fixos, boletos, aluguel',c:'#C1441A'},
@@ -647,9 +659,18 @@ const fx=(v,r)=>v<0?'neg':(v<r?'war':'pos');
 
 let tT;function toast(m){const t=document.getElementById('toast');t.textContent=m;
   t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),1500);}
+let _modalAberto=false;
 function modal(h){document.getElementById('mdl').innerHTML=h;
-  document.getElementById('ov').classList.add('on');}
-function closeM(){document.getElementById('ov').classList.remove('on');}
+  document.getElementById('ov').classList.add('on');
+  if(!_modalAberto){ _modalAberto=true; history.pushState({modal:true},''); }}
+function closeM(){document.getElementById('ov').classList.remove('on');
+  if(_modalAberto){ _modalAberto=false;
+    if(history.state&&history.state.modal) history.back(); }}
+// botão "voltar" do navegador fecha o modal em vez de sair do site
+window.addEventListener('popstate',()=>{
+  if(document.getElementById('ov').classList.contains('on')){
+    document.getElementById('ov').classList.remove('on'); _modalAberto=false;
+  }});
 
 
 
@@ -811,21 +832,36 @@ function formLanc(){
     d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     recalc(ano,mes);closeM();toast('lançamento excluído');grade();painel();};
 }
-function salvarLanc(){
-  const d=M().dias[form.idx];
-  // zerar um lançamento existente = excluir
+async function salvarLanc(){
+  const d=M().dias[form.idx],antigo=form.edit?d.mov[form.j]:null;
+  // zerar um lançamento existente = excluir do banco
   if(form.edit&&form.valor<=0){
+    sync('busy');
+    try{ if(antigo?.id) await sbApagarLancamento(antigo.id); }
+    catch(e){ sync('off'); toast('erro ao excluir: '+e.message); return; }
     d.mov.splice(form.j,1);
     d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     recalc(ano,mes);closeM();toast('lançamento removido');grade();painel();return;}
   if(form.valor<=0){toast('informe um valor maior que zero');return;}
-  if(form.edit){const o=d.mov[form.j];d.mov.splice(form.j,1);
-    d[o.t]=d.mov.filter(m=>m.t===o.t).reduce((a,b)=>a+b.v,0);}
-  d.mov.push({t:form.tipo,v:form.valor,desc:form.desc.trim(),tag:form.tag||null});
-  d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
-  recalc(ano,mes);closeM();
-  toast(`${form.desc.trim()||CAT[form.tipo].s}: ${rs(form.valor)} em ${d.d}/${mes}`);
-  grade();painel();
+  sync('busy');
+  try{
+    if(form.edit&&antigo?.id){
+      await sbEditarLancamento(antigo.id,{tipo:form.tipo,valor:form.valor,
+        nome:form.desc.trim()||null,tag_id:form.tag||null,
+        data:`${ano}-${String(mes).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`});
+      d.mov.splice(form.j,1);
+      d[antigo.t]=d.mov.filter(m=>m.t===antigo.t).reduce((a,b)=>a+b.v,0);
+      d.mov.push({id:antigo.id,t:form.tipo,v:form.valor,desc:form.desc.trim(),tag:form.tag||null});
+    }else{
+      const nv=await sbNovoLancamento({ano,mes,dia:d.d,tipo:form.tipo,
+        valor:form.valor,nome:form.desc.trim(),tagId:form.tag});
+      d.mov.push({id:nv.id,t:form.tipo,v:form.valor,desc:form.desc.trim(),tag:form.tag||null});
+    }
+    d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
+    recalc(ano,mes);closeM();
+    toast(`${form.desc.trim()||CAT[form.tipo].s}: ${rs(form.valor)} em ${d.d}/${mes}`);
+    grade();painel();sync('on');
+  }catch(e){ sync('off'); toast('erro ao salvar: '+e.message); }
 }
 
 /* ── painel lateral ── */
@@ -1203,6 +1239,10 @@ function arrancar(){
 if(document.readyState==='loading')
   document.addEventListener('DOMContentLoaded',arrancar);
 else arrancar();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>

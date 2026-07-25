@@ -569,9 +569,16 @@ async function sbCarregarMes(ano, mes){
     dia.mov.push({ id:l.id, t:l.tipo, v, desc:l.nome||'', tag:l.tag_id||null });
   });
 
+  // sem abertura própria: herda o saldo final do mês anterior (se carregado)
+  let abertura = Number(abert.data?.valor ?? NaN);
+  if (Number.isNaN(abertura)) {
+    let py=ano, pm=mes-1; if(pm<1){pm=12;py--;}
+    const ant = D.meses[_k(py,pm)];
+    abertura = ant ? ant.dias[ant.dias.length-1].saldo : 0;
+  }
   D.meses[_k(ano,mes)] = {
     dias,
-    abertura: Number(abert.data?.valor ?? 0),
+    abertura,
     metaDia:  Number(meta.data?.meta_diaria  ?? 35),
     metaEco:  Number(meta.data?.meta_eco_pct ?? 0.25)
   };
@@ -719,7 +726,8 @@ function sbEscutar(aoMudar){
 
 <script>
 const AB=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-const HOJE={y:2026,m:7,d:22};
+const _hoje=new Date();
+const HOJE={y:_hoje.getFullYear(),m:_hoje.getMonth()+1,d:_hoje.getDate()};
 const CAT={
  entrada:{n:'entradas',s:'entrada',i:'E',ex:'salário, comissão, vales',c:'#4E9350'},
  saida:{n:'saídas',s:'saída',i:'S',ex:'gastos fixos, boletos, aluguel',c:'#C1441A'},
@@ -1125,8 +1133,21 @@ function formNovo(){
     render();renderDay();};
 }
 async function salvar(){
-  if(form.valor<=0){toast('informe um valor');return;}
   const d=M().dias[form.idx],antigo=form.edit?d.mov[form.j]:null;
+  // zerar um lançamento existente = excluir do banco
+  if(form.edit&&form.valor<=0){
+    sync('busy');
+    try{ if(antigo?.id) await sbApagarLancamento(antigo.id); }
+    catch(e){ sync('off'); toast('erro ao excluir: '+e.message); return; }
+    d.mov.splice(form.j,1);
+    d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
+    recalc(ano,mes);close_('fsNew');toast('lançamento removido');
+    render();sync('on');
+    if(document.getElementById('fsDay')?.classList.contains('on')){dayIdx=form.idx;renderDay();}
+    return;
+  }
+  if(form.valor<=0){toast('informe um valor');return;}
+  sync('busy');
   sync('busy');
   try{
     if(form.edit&&antigo?.id){
