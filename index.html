@@ -406,6 +406,12 @@ const _pad = n => String(n).padStart(2,'0');
 const _ultimoDia = (y,m) => new Date(y,m,0).getDate();
 
 /* ── AUTENTICAÇÃO ───────────────────────────────────────────── */
+async function uidAtual(){
+  if(USER?.id) return USER.id;
+  const { data:{ user } } = await SB.auth.getUser();
+  if(user){ USER = user; return user.id; }
+  throw new Error('sessão expirada — faça login de novo');
+}
 async function sbSessao(){
   const { data:{ session } } = await SB.auth.getSession();
   USER = session?.user ?? null;
@@ -493,7 +499,7 @@ async function sbCarregarAuxiliares(){
 /* ── GRAVAR ─────────────────────────────────────────────────── */
 async function sbNovoLancamento({ ano, mes, dia, tipo, valor, nome, tagId }){
   const { data, error } = await SB.from('lancamentos').insert({
-    user_id: USER.id, data:`${ano}-${_pad(mes)}-${_pad(dia)}`,
+    user_id: await uidAtual(), data:`${ano}-${_pad(mes)}-${_pad(dia)}`,
     tipo, valor, nome: nome||null, tag_id: tagId||null
   }).select().single();
   if (error) throw error;
@@ -511,7 +517,7 @@ async function sbApagarLancamento(id){
 /* Abertura do mês: gravada explicitamente, nunca derivada de outro mês */
 async function sbSalvarAbertura(ano, mes, valor){
   const { error } = await SB.from('saldos_iniciais')
-    .upsert({ user_id:USER.id, ano, mes, valor }, { onConflict:'user_id,ano,mes' });
+    .upsert({ user_id: await uidAtual(), ano, mes, valor }, { onConflict:'user_id,ano,mes' });
   if (error) throw error;
 }
 
@@ -521,7 +527,7 @@ async function sbSalvarPrevisao(item){          // {id?, n, v}
       .update({ nome:item.n, valor_mensal:item.v }).eq('id',item.id);
   } else {
     const { data } = await SB.from('previsao_itens').insert({
-      user_id:USER.id, nome:item.n, valor_mensal:item.v, ordem:PREV.length
+      user_id: await uidAtual(), nome:item.n, valor_mensal:item.v, ordem:PREV.length
     }).select().single();
     item.id = data?.id;
   }
@@ -530,7 +536,7 @@ async function sbSalvarPrevisao(item){          // {id?, n, v}
 async function sbApagarPrevisao(id){ await SB.from('previsao_itens').delete().eq('id',id); }
 async function sbSalvarDivisor(n){
   await SB.from('preferencias')
-    .upsert({ user_id:USER.id, previsao_divisor:n }, { onConflict:'user_id' });
+    .upsert({ user_id: await uidAtual(), previsao_divisor:n }, { onConflict:'user_id' });
 }
 
 async function sbSalvarTag(t){                  // {id?, nome, cor, areas}
@@ -538,7 +544,7 @@ async function sbSalvarTag(t){                  // {id?, nome, cor, areas}
     await SB.from('tags').update({ nome:t.nome, cor:t.cor, areas:t.areas }).eq('id',t.id);
   } else {
     const { data } = await SB.from('tags').insert({
-      user_id:USER.id, nome:t.nome, cor:t.cor, areas:t.areas
+      user_id: await uidAtual(), nome:t.nome, cor:t.cor, areas:t.areas
     }).select().single();
     t.id = data?.id;
   }
@@ -552,7 +558,7 @@ async function sbSalvarCartao(c){
       dia_fechamento:c.fecha||null, dia_vencimento:c.vence||null }).eq('id',c.id);
   } else {
     const { data } = await SB.from('cartoes').insert({
-      user_id:USER.id, nome:c.nome,
+      user_id: await uidAtual(), nome:c.nome,
       dia_fechamento:c.fecha||null, dia_vencimento:c.vence||null
     }).select().single();
     c.id = data?.id;
@@ -568,7 +574,7 @@ async function sbSalvarPatrimonio(contaId, ano, mes, valor){
       .eq('conta_id',contaId).eq('ano',ano).eq('mes',mes);
   } else {
     await SB.from('patrimonio_valores').upsert({
-      conta_id:contaId, user_id:USER.id, ano, mes, valor
+      conta_id:contaId, user_id: await uidAtual(), ano, mes, valor
     }, { onConflict:'conta_id,ano,mes' });
   }
 }
@@ -577,7 +583,7 @@ async function sbSalvarConta(c){                // {id?, nome, cat}
     await SB.from('patrimonio_contas').update({ nome:c.nome }).eq('id',c.id);
   } else {
     const { data } = await SB.from('patrimonio_contas').insert({
-      user_id:USER.id, nome:c.nome, categoria:c.cat, ordem:D.patrimonio.length
+      user_id: await uidAtual(), nome:c.nome, categoria:c.cat, ordem:D.patrimonio.length
     }).select().single();
     c.id = data?.id;
   }
