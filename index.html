@@ -65,22 +65,23 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 
 /* ── grade ── */
 .gridhead,.gridrow{display:grid;
-  grid-template-columns:52px repeat(5,minmax(84px,1fr)) minmax(112px,1.2fr)}
+  grid-template-columns:52px repeat(4,minmax(92px,1fr)) minmax(120px,1.3fr)}
 .gridhead{position:sticky;top:58px;background:var(--bg);z-index:20;
   border-bottom:1px solid var(--line)}
-.gridhead>div{padding:9px 10px;font-size:12px;color:var(--sub);font-weight:500;
+.gridhead>div{padding:7px 10px;font-size:11.5px;color:var(--sub);font-weight:500;
   display:flex;align-items:center;gap:6px;justify-content:flex-end}
 .gridhead>div:first-child{justify-content:center}
 .gridhead .dot{width:17px;height:17px;font-size:9.5px}
-.gridrow{border-bottom:1px solid var(--line);min-height:34px;transition:background .12s}
+.gridrow{border-bottom:1px solid var(--line);min-height:29px;transition:background .1s}
 .gridrow:hover{background:var(--wk)}
+.gridrow:nth-child(even){background:rgba(127,127,127,.03)}
 .gridrow.wk{background:var(--bg2)}
 .gridrow.wk:hover{background:var(--wk)}
 .gridrow.hj{box-shadow:inset 3px 0 0 var(--laranja)}
 .gcell{display:flex;align-items:center;justify-content:flex-end;padding:0;position:relative}
 .gcell button{border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:500;
-  color:var(--fg);text-align:right;width:100%;padding:8px 10px;font-variant-numeric:tabular-nums;
-  transition:background .12s,box-shadow .12s;display:flex;align-items:center;
+  color:var(--fg);text-align:right;width:100%;padding:5px 10px;font-variant-numeric:tabular-nums;
+  transition:background .1s,box-shadow .1s;display:flex;align-items:center;
   justify-content:flex-end;gap:5px;height:100%}
 .gcell button:hover{background:var(--wk);box-shadow:inset 0 0 0 1px var(--line)}
 .gcell button:active{background:var(--line)}
@@ -92,12 +93,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
   text-overflow:ellipsis;white-space:nowrap;max-width:64px;flex-shrink:1}
 .gday{display:flex;align-items:center;justify-content:center;gap:5px;font-size:13px;color:var(--sub)}
 .gday b{font-weight:600;color:var(--fg)}
-.gsal{display:flex;align-items:center;justify-content:flex-end;padding:0 11px;
-  font-size:13.5px;font-weight:600}
+.gsal{display:flex;align-items:center;justify-content:flex-end;padding:0 13px;
+  font-size:14px;font-weight:700;letter-spacing:-.01em}
 .pos{background:var(--verde);color:var(--verde-t)}
 .neg{background:var(--verm);color:var(--verm-t)}
 .war{background:var(--amar);color:var(--amar-t)}
-.gridfoot{display:grid;grid-template-columns:52px repeat(5,minmax(84px,1fr)) minmax(112px,1.2fr);
+.gridfoot{display:grid;grid-template-columns:52px repeat(4,minmax(92px,1fr)) minmax(120px,1.3fr);
   border-top:2px solid var(--line);background:var(--bg2);position:sticky;bottom:0}
 .gridfoot>div{padding:11px 10px;font-size:13.5px;font-weight:600;text-align:right;
   font-variant-numeric:tabular-nums}
@@ -331,7 +332,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
         <div>dia</div>
         <div><span class="dot d-entrada">E</span>entrada</div>
         <div><span class="dot d-saida">S</span>saída</div>
-        <div><span class="dot d-cartao">C</span>cartão</div>
         <div><span class="dot d-economia">E</span>economia</div>
         <div><span class="dot d-diario">D</span>diário</div>
         <div>saldo</div>
@@ -621,10 +621,10 @@ const CAT={
  entrada:{n:'entradas',s:'entrada',i:'E',ex:'salário, comissão, vales',c:'#4E9350'},
  saida:{n:'saídas',s:'saída',i:'S',ex:'gastos fixos, boletos, aluguel',c:'#C1441A'},
  diario:{n:'diários',s:'diário',i:'D',ex:'gastos variáveis, compras',c:'#D81B7A'},
- economia:{n:'economias',s:'economia',i:'E',ex:'reserva, investimento',c:'#8BC34A'},
- cartao:{n:'gastos com cartão',s:'gasto com cartão',i:'C',ex:'gastos ou total da fatura',c:'#6236E8'}};
-const ORD=['entrada','saida','cartao','economia','diario'];
-const SIG={entrada:1,saida:-1,diario:-1,economia:-1,cartao:-1};
+ economia:{n:'economias',s:'economia',i:'E',ex:'reserva, investimento',c:'#8BC34A'}
+};
+const ORD=['entrada','saida','economia','diario'];
+const SIG={entrada:1,saida:-1,diario:-1,economia:-1};
 const DOW=['dom','seg','ter','qua','qui','sex','sáb'];
 let ano=2026,mes=7,form={};   /* D, TAGS, PREV, PREVDIV vêm da camada Supabase */
 
@@ -652,7 +652,7 @@ function recalc(y,m){
 function recalcTudo(){Object.keys(D.meses).forEach(k=>{const[y,m]=k.split('-').map(Number);recalc(y,m);});}
 /* dados chegam do Supabase; recalcTudo() roda após cada carga */
 
-function tot(y,m){const mm=D.meses[key(y,m)];const t={entrada:0,saida:0,diario:0,economia:0,cartao:0,prev:0};
+function tot(y,m){const mm=D.meses[key(y,m)];const t={entrada:0,saida:0,diario:0,economia:0,prev:0};
   mm.dias.forEach(x=>{ORD.forEach(c=>t[c]+=x[c]);t.prev+=x.prev||0;});return t;}
 const ref=()=>{const p=prevDia();return (p>0?p:35)*30;};
 const fx=(v,r)=>v<0?'neg':(v<r?'war':'pos');
@@ -867,8 +867,8 @@ async function salvarLanc(){
 /* ── painel lateral ── */
 function painel(){
   const t=tot(ano,mes),mm=M();
-  const perf=t.entrada-t.saida-t.diario-t.economia-t.cartao-t.prev;
-  const custo=t.saida+t.diario+t.cartao+t.prev;
+  const perf=t.entrada-t.saida-t.diario-t.economia-t.prev;
+  const custo=t.saida+t.diario+t.prev;
   const pct=t.entrada?t.economia/t.entrada:0,meta=mm.metaEco||.25;
   const nd=mm.dias.length,dv=(ano===HOJE.y&&mes===HOJE.m)?HOJE.d:nd;
   const media=t.diario/dv;
@@ -878,7 +878,7 @@ function painel(){
   <div class="pnl"><div class="pnlh">cálculos do mês</div>
     <div class="prow"><div><div class="t">performance</div><div class="f">
       ${dt('entrada')}<span class="op">−</span>${dt('saida')}<span class="op">−</span>
-      ${dt('cartao')}<span class="op">−</span>${dt('economia')}<span class="op">−</span>
+      ${dt('economia')}<span class="op">−</span>
       ${dt('diario')}</div></div>
       <div class="v"><b class="${perf>=0?'tpos':'tneg'}">${rs(perf)}</b>
       <span>${perf>=0?'sobrou dinheiro':'faltou dinheiro'}</span></div></div>
@@ -887,7 +887,7 @@ function painel(){
       <div class="v"><b>${(pct*100).toFixed(0)}%</b>
       <span>${pct===0?'nada guardado':(pct>=meta?'meta batida':'abaixo do ideal')}</span></div></div>
     <div class="prow"><div><div class="t">custo de vida</div><div class="f">
-      ${dt('saida')}<span class="op">+</span>${dt('cartao')}<span class="op">+</span>
+      ${dt('saida')}<span class="op">+</span>
       ${dt('diario')}</div></div>
       <div class="v"><b>${rs(custo)}</b>
       <span>${custo<=t.entrada?'dentro da renda':'acima da renda'}</span></div></div>

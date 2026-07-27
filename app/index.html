@@ -76,22 +76,27 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .cv{color:var(--sub);font-size:11px}
 
 /* linhas */
-.row,.grp{display:grid;grid-template-columns:44px 1fr 112px;border-bottom:1px solid var(--line);
-  cursor:pointer;transition:background .14s}
+/* faixa de saldo larga = quase metade da linha, cor cheia (estilo Breno) */
+.row,.grp{display:grid;grid-template-columns:34px 1fr 46%;
+  border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
 .row{min-height:44px}
+.row:nth-child(even){background:rgba(127,127,127,.035)}
 .row:active,.grp:active{background:var(--wk)}
-.row .d,.grp .d{display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--fg)}
-.grp .d{align-items:flex-start;padding-top:11px}
-.row.wk .d,.grp.wk .d{background:var(--wk)}
-.row.hj .d,.grp.hj .d{background:var(--btn);color:var(--btnfg);font-weight:600}
+.row .d,.grp .d{display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--sub);font-weight:500}
+.grp .d{align-items:flex-start;padding-top:12px}
+.row.wk .d,.grp.wk .d{color:var(--fg);opacity:.55}
+.row.hj .d,.grp.hj .d{background:var(--btn);color:var(--btnfg);font-weight:700}
 .row .val{display:flex;align-items:center;gap:7px;padding:0 10px;justify-content:flex-end;
   font-size:15px;font-weight:500}
-.row .val .z{color:var(--sub);opacity:.5}
-.grp .stack>div{display:flex;align-items:center;gap:7px;padding:0 10px;height:34px;
+.row .val .z{color:var(--sub);opacity:.4}
+.grp .stack>div{display:flex;align-items:center;gap:6px;padding:0 10px;height:30px;
   border-bottom:1px solid var(--line);justify-content:flex-end;font-size:14px}
 .grp .stack>div:last-child{border-bottom:none}
-.sal{display:flex;align-items:center;justify-content:flex-end;padding:0 10px;font-size:15px;font-weight:500}
-.grp .sal{align-items:flex-start;padding-top:11px}
+/* saldo: faixa de cor cheia, ocupando a coluna inteira */
+.sal{display:flex;align-items:center;justify-content:flex-end;padding:0 14px;
+  font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+.grp .sal{align-items:flex-start;padding-top:12px}
 .pos{background:var(--verde);color:var(--verde-t)}
 .neg{background:var(--verm);color:var(--verm-t)}
 .war{background:var(--amar);color:var(--amar-t)}
@@ -406,7 +411,6 @@ section[id^=s-]{animation:fade .22s var(--e)}
   <button class="mrow" id="mPerfil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>editar perfil<span class="ar">›</span></button>
   <button class="mrow" id="mPrev"><span class="dot d-prev" style="width:22px;height:22px">D</span>
     <span>previsão de diário<span class="sb" id="prevSub">—</span></span><span class="ar">›</span></button>
-  <button class="mrow" id="mCart"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>cartões de crédito<span class="ar">›</span></button>
   <a class="mrow" href="/" style="text-decoration:none">
     <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
     versão completa (patrimônio)<span class="ar">›</span></a>
@@ -456,12 +460,6 @@ section[id^=s-]{animation:fade .22s var(--e)}
       <span>dividido por</span><span style="font-weight:400;color:var(--sub)"><span id="pvDivN">30</span> dias ▾</span></button></div>
     <div class="pvtot num" id="pvRes">R$ 0,00</div>
   </div>
-</div>
-
-<div class="fs" id="fsCard">
-  <div class="fsh"><button data-close="fsCard" aria-label="Voltar">←</button><h2>cartões</h2>
-    <button id="cardAdd" aria-label="Novo cartão">+</button></div>
-  <div id="cardList" style="flex:1"></div>
 </div>
 
 <div class="fs" id="fsPerfil">
@@ -732,10 +730,10 @@ const CAT={
  entrada:{n:'entradas',s:'entrada',i:'E',ex:'salário, comissão, vales',c:'#4E9350'},
  saida:{n:'saídas',s:'saída',i:'S',ex:'gastos fixos, boletos, aluguel',c:'#C1441A'},
  diario:{n:'diários',s:'diário',i:'D',ex:'gastos variáveis, compras',c:'#D81B7A'},
- economia:{n:'economias',s:'economia',i:'E',ex:'reserva, investimento',c:'#8BC34A'},
- cartao:{n:'gastos com cartão',s:'gasto com cartão',i:'C',ex:'gastos ou total da fatura',c:'#6236E8'}};
-const ORD=['entrada','saida','diario','economia','cartao'];
-const SIG={entrada:1,saida:-1,diario:-1,economia:-1,cartao:-1};
+ economia:{n:'economias',s:'economia',i:'E',ex:'reserva, investimento',c:'#8BC34A'}
+};
+const ORD=['entrada','saida','economia','diario'];
+const SIG={entrada:1,saida:-1,diario:-1,economia:-1};
 const CORES=[['cinza','#6B6B6B'],['azul','#4F6E9E'],['amarelo','#7E6A18'],['verde','#4E8A6B'],
   ['vermelho','#A94442'],['roxo','#5F4E8E'],['rosa','#9E5A70'],['marrom','#7A5B3A']];
 const AREAS=['saldos','performance','economizado','custo de vida','diário médio'];
@@ -768,7 +766,7 @@ function recalc(y,m){
 function recalcTudo(){Object.keys(D.meses).forEach(k=>{const[y,m]=k.split('-').map(Number);recalc(y,m);});}
 /* dados chegam do Supabase */
 
-function tot(y,m){const mm=D.meses[key(y,m)];const t={entrada:0,saida:0,diario:0,economia:0,cartao:0,prev:0};
+function tot(y,m){const mm=D.meses[key(y,m)];const t={entrada:0,saida:0,diario:0,economia:0,prev:0};
   mm.dias.forEach(x=>{ORD.forEach(c=>t[c]+=x[c]);t.prev+=x.prev||0;});return t;}
 const ref=()=>{const p=prevDia();return (p>0?p:35)*30;};
 const fx=(v,r)=>v<0?'neg':(v<r?'war':'pos');
@@ -853,8 +851,8 @@ function renderDay(){
 /* ── totais ── */
 function totais(){
   const t=tot(ano,mes),mm=M();
-  const perf=t.entrada-t.saida-t.diario-t.economia-t.cartao-t.prev;
-  const custo=t.saida+t.diario+t.cartao+t.prev;
+  const perf=t.entrada-t.saida-t.diario-t.economia-t.prev;
+  const custo=t.saida+t.diario+t.prev;
   const pct=t.entrada?t.economia/t.entrada:0,meta=mm.metaEco||.25;
   const nd=mm.dias.length,dv=(ano===HOJE.y&&mes===HOJE.m)?HOJE.d:nd;
   const media=t.diario/dv;
@@ -863,8 +861,7 @@ function totais(){
   document.getElementById('calc').innerHTML=`
    <div class="card"><div><h3>performance</h3><div class="frm">
      ${dt('entrada')}<span class="op">−</span>${dt('saida')}<span class="op">−</span>
-     ${dt('diario')}<span class="op">−</span>${dt('economia')}<span class="op">−</span>
-     ${dt('cartao')}<span class="op">−</span><span class="dot d-prev">D</span></div></div>
+     ${dt('diario')}<span class="op">−</span>${dt('economia')}<span class="op">−</span><span class="dot d-prev">D</span></div></div>
      <div class="rt"><b class="${perf>=0?'tpos':'tneg'}">${rs(perf)}</b>
      <span>${perf>=0?'sobrou dinheiro':'faltou dinheiro'}</span></div></div>
    <div class="card"><div><h3>economizado</h3><div class="frm">
@@ -873,8 +870,7 @@ function totais(){
      <div class="rt"><b>${(pct*100).toFixed(0)}%</b>
      <span>${pct===0?'nada guardado':(pct>=meta?'meta batida':'abaixo do ideal')}</span></div></div>
    <div class="card"><div><h3>custo de vida</h3><div class="frm">
-     ${dt('saida')}<span class="op">+</span>${dt('diario')}<span class="op">+</span>
-     ${dt('cartao')}<span class="op">+</span><span class="dot d-prev">D</span></div></div>
+     ${dt('saida')}<span class="op">+</span>${dt('diario')}<span class="op">+</span><span class="dot d-prev">D</span></div></div>
      <div class="rt"><b>${rs(custo)}</b>
      <span>${custo<=t.entrada?'dentro da renda':'acima da renda'}</span></div></div>
    <div class="card"><div><h3>diário médio</h3><div class="frm">
@@ -1025,45 +1021,6 @@ function addPrev(i){
 
 function quantDias(){return M().dias.length;}
 
-/* ── cartões ── */
-function renderCards(){
-  const box=document.getElementById('cardList');
-  if(!CARTOES.length){
-    box.innerHTML=`<div class="empty" style="flex:1">
-      <button class="ecirc" id="cardAdd2"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 11h20M6 21h5"/></svg></button>
-      <p>sem cartões por aqui. toque no botão acima para criar.</p></div>`;
-    document.getElementById('cardAdd2').onclick=()=>addCard();
-  }else{
-    box.innerHTML=CARTOES.map((c,i)=>`<button class="mv" data-i="${i}">
-      <span class="l"><span class="dot d-cartao">C</span>${c.nome}</span>
-      <span style="color:var(--sub);font-size:14px">fecha ${c.fecha} · vence ${c.vence}</span></button>`).join('');
-    box.querySelectorAll('.mv').forEach(b=>b.onclick=()=>addCard(+b.dataset.i));
-  }
-}
-function addCard(i){
-  const ed=i!==undefined,c=ed?CARTOES[i]:{nome:'',fecha:'',vence:''};
-  sheet(`<div class="shh"><h2>${ed?'editar cartão':'adicionar cartão'}</h2>
-    <button class="x" onclick="closeSheet()">✕</button></div>
-   <div class="fld"><label>nome</label><input id="cN" value="${c.nome}" placeholder="Nubank"></div>
-   <div class="fld"><label>dia do fechamento</label><input id="cF" inputmode="numeric" value="${c.fecha}" placeholder="20"></div>
-   <div class="fld"><label>dia do vencimento</label><input id="cV" inputmode="numeric" value="${c.vence}" placeholder="27"></div>
-   <button class="ctaslim" id="cOk">${ed?'salvar':'adicionar'}</button>
-   ${ed?'<button class="del" id="cDel">excluir cartão</button>':'<div style="height:6px"></div>'}`);
-  document.getElementById('cOk').onclick=async()=>{
-    const nome=document.getElementById('cN').value.trim();
-    const fecha=document.getElementById('cF').value.trim();
-    const vence=document.getElementById('cV').value.trim();
-    if(!nome){toast('dê um nome ao cartão');return;}
-    try{
-      if(ed){const c2={...CARTOES[i],nome,fecha,vence};await sbSalvarCartao(c2);CARTOES[i]=c2;}
-      else{const c2=await sbSalvarCartao({nome,fecha,vence});CARTOES.push(c2);}
-      closeSheet();renderCards();toast(ed?'cartão salvo':'cartão criado');
-    }catch(e){ toast('erro: '+e.message); }};
-  if(ed)document.getElementById('cDel').onclick=async()=>{
-    try{ if(CARTOES[i].id) await sbApagarCartao(CARTOES[i].id); }
-    catch(e){ toast('erro: '+e.message); return; }
-    CARTOES.splice(i,1);closeSheet();renderCards();toast('cartão excluído');};
-}
 
 
 /* ── novo lançamento (pop-up) ── */
@@ -1203,15 +1160,6 @@ function horizonte(){
 
 
 
-document.getElementById('dZerar').onclick=async()=>{
-  if(!confirm('Apagar TODAS as movimentações no servidor? Isto não tem volta.'))return;
-  try{ await SB.from('lancamentos').delete().eq('user_id', await uidAtual()); }
-  catch(e){ toast('erro: '+e.message); return; }
-  D.meses={};await sbCarregarJanela(ano,mes,1,8);recalcTudo();
-  close_('fsDados');close_('fsConf');render();toast('conta zerada');};
-document.getElementById('calBtn').onclick=()=>{ano=HOJE.y;mes=HOJE.m;render();
-  const el=document.querySelector('.hj');if(el)el.scrollIntoView({block:'center',behavior:'smooth'});};
-
 /* ── navegação ── */
 function aba(t){
   document.querySelectorAll('.tb button[data-t]').forEach(x=>
@@ -1221,11 +1169,6 @@ function aba(t){
   window.scrollTo(0,0);}
 function render(){document.getElementById('mt').textContent=AB[mes-1]+'/'+String(ano).slice(2);
   saldos();totais();tags();pintaGrade();}
-document.getElementById('pv').onclick=()=>{let y=ano,m=mes-1;if(m<1){m=12;y--;}
-  if(D.meses[key(y,m)]){ano=y;mes=m;dayIdx=0;render();}else toast('sem dados antes de jan/26');};
-document.getElementById('nx').onclick=()=>{let y=ano,m=mes+1;if(m>12){m=1;y++;}
-  if(D.meses[key(y,m)]){ano=y;mes=m;dayIdx=0;render();}else toast('sem dados depois de dez/27');};
-
 
 /* ═══ indicador de sincronia ═══ */
 let syncT;
@@ -1242,30 +1185,60 @@ async function irPara(y,m){
     sync('on');}
   ano=y;mes=m;dayIdx=0;render();}
 function ligarEventos(){
+  // topo
   document.getElementById('pv').onclick=()=>{let y=ano,m=mes-1;if(m<1){m=12;y--;}irPara(y,m);};
   document.getElementById('nx').onclick=()=>{let y=ano,m=mes+1;if(m>12){m=1;y++;}irPara(y,m);};
   document.getElementById('calBtn').onclick=()=>{irPara(HOJE.y,HOJE.m);
     setTimeout(()=>{const el=document.querySelector('.hj');
       if(el)el.scrollIntoView({block:'center',behavior:'smooth'});},120);};
-  document.getElementById('mSair').onclick=()=>sbLogout();
-  document.getElementById('lgBtn').onclick=tentarLogin;
-  document.getElementById('lgSenha').onkeydown=e=>{if(e.key==='Enter')tentarLogin();};
-  
-  
+  document.getElementById('gb').onclick=()=>{horizonte();open_('fsHz');};
+  // abas
+  document.querySelectorAll('.tb button[data-t]').forEach(b=>b.onclick=()=>aba(b.dataset.t));
+  document.getElementById('fab').onclick=()=>pickTipo(c=>novo(c));
+  // saldos
+  document.getElementById('pill').onclick=()=>pickCol(c=>{col=c;saldos();});
+  // dia
   document.getElementById('dayPrev').onclick=()=>{if(dayIdx>0){dayIdx--;renderDay();}};
   document.getElementById('dayNext').onclick=()=>{if(dayIdx<M().dias.length-1){dayIdx++;renderDay();}};
   document.getElementById('dayPill').onclick=()=>pickCol(c=>{dayCol=c;renderDay();});
   document.getElementById('dayAdd').onclick=()=>novo(dayCol==='todas'?'diario':dayCol);
-  
-  
-  
-  
+  // tags
+  document.getElementById('tgFilter').oninput=tags;
+  document.getElementById('tgNew').onclick=()=>criarTag();
   document.getElementById('tgEdit').onclick=()=>TAGS.length
     ? toast('toque numa tag da lista para editar') : toast('crie uma tag primeiro');
-  
-  
-  
-  
+  // previsão e cartões (telas cheias)
+  document.getElementById('pvAdd').onclick=()=>addPrev();
+  // menu
+  document.getElementById('mPerfil').onclick=()=>open_('fsPerfil');
+  document.getElementById('mPrev').onclick=()=>{renderPrev();open_('fsPv');};
+  document.getElementById('mConf').onclick=()=>open_('fsConf');
+  document.getElementById('mSair').onclick=()=>sbLogout();
+  document.getElementById('cfDados').onclick=()=>open_('fsDados');
+  document.getElementById('cfApar').onclick=()=>{
+    document.documentElement.dataset.t=document.documentElement.dataset.t==='dark'?'':'dark';
+    document.getElementById('cfAparSub').textContent=
+      document.documentElement.dataset.t==='dark'?'modo escuro':'modo claro';};
+  document.getElementById('pfSalvar').onclick=async()=>{
+    const nome=document.getElementById('pfNome').value.trim()||'Luis';
+    document.getElementById('profNome').textContent=nome;
+    try{ await SB.from('preferencias').upsert(
+      {user_id:await uidAtual(),nome,sobrenome:document.getElementById('pfSobre').value.trim()},
+      {onConflict:'user_id'}); }catch(e){}
+    close_('fsPerfil');toast('perfil salvo');};
+  document.getElementById('dZerar').onclick=async()=>{
+    if(!confirm('Apagar TODAS as movimentações no servidor? Isto não tem volta.'))return;
+    try{ await SB.from('lancamentos').delete().eq('user_id',await uidAtual()); }
+    catch(e){ toast('erro: '+e.message); return; }
+    D.meses={};await sbCarregarJanela(ano,mes,1,8);recalcTudo();
+    close_('fsDados');close_('fsConf');render();toast('conta zerada');};
+  document.getElementById('dApagar').onclick=()=>toast('exclusão de conta — em breve');
+  // login
+  document.getElementById('lgBtn').onclick=tentarLogin;
+  document.getElementById('lgSenha').onkeydown=e=>{if(e.key==='Enter')tentarLogin();};
+  // overlays e telas cheias
+  document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')closeSheet();};
+  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close_(b.dataset.close));
 }
 
 /* ═══ carga inicial ═══ */
