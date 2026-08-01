@@ -365,7 +365,7 @@ section[id^=s-]{animation:fade .22s var(--e)}
 <div class="app">
 
 <div class="hd">
-  <button class="cal" id="calBtn" aria-label="Ir para hoje">22</button>
+  <button class="cal" id="calBtn" aria-label="Ir para hoje"></button>
   <div class="mnv">
     <button id="pv" aria-label="Mês anterior">‹</button>
     <div class="mtitle" id="mt">jul/26</div>
@@ -547,9 +547,8 @@ async function sbCarregarMes(ano, mes){
   const ini = `${ano}-${_pad(mes)}-01`;
   const fim = `${ano}-${_pad(mes)}-${_pad(_ultimoDia(ano,mes))}`;
 
-  const [lanc, abert, meta] = await Promise.all([
+  const [lanc, meta] = await Promise.all([
     SB.from('lancamentos').select('*').gte('data',ini).lte('data',fim).order('data'),
-    SB.from('saldos_iniciais').select('valor').eq('ano',ano).eq('mes',mes).maybeSingle(),
     SB.from('metas').select('*').eq('ano',ano).eq('mes',mes).maybeSingle()
   ]);
   if (lanc.error) throw lanc.error;
@@ -567,16 +566,10 @@ async function sbCarregarMes(ano, mes){
     dia.mov.push({ id:l.id, t:l.tipo, v, desc:l.nome||'', tag:l.tag_id||null });
   });
 
-  // sem abertura própria: herda o saldo final do mês anterior (se carregado)
-  let abertura = Number(abert.data?.valor ?? NaN);
-  if (Number.isNaN(abertura)) {
-    let py=ano, pm=mes-1; if(pm<1){pm=12;py--;}
-    const ant = D.meses[_k(py,pm)];
-    abertura = ant ? ant.dias[ant.dias.length-1].saldo : 0;
-  }
   D.meses[_k(ano,mes)] = {
     dias,
-    abertura,
+    // abertura NÃO é gravada: é sempre o fechamento do mês anterior (ver recalcTudo)
+    abertura: undefined,
     metaDia:  Number(meta.data?.meta_diaria  ?? 35),
     metaEco:  Number(meta.data?.meta_eco_pct ?? 0.25)
   };
@@ -590,8 +583,19 @@ async function sbCarregarJanela(ano, mes, antes=1, depois=8){
     const t = ano*12 + (mes-1) + i;
     alvos.push([Math.floor(t/12), t%12 + 1]);
   }
-  await Promise.all(alvos.map(([y,m]) =>
-    D.meses[_k(y,m)] ? null : sbCarregarMes(y,m)));
+  // garante a cadeia de herança: do mês pedido para trás até a âncora
+  // (ou até o primeiro mês já em memória), senão a abertura não tem de onde vir
+  const alvoIdx = ano*12 + (mes-1);
+  const ancoraIdx = 2025*12 + 0;   // jan/2025
+  for (let t = alvoIdx-1; t >= ancoraIdx; t--){
+    const y=Math.floor(t/12), m=t%12+1;
+    if (D.meses[_k(y,m)]) break;   // já carregado: a cadeia daqui pra trás existe
+    alvos.push([y,m]);
+  }
+  // carrega os que faltam (paralelo); recalcTudo depois ordena a cascata
+  await Promise.all(alvos
+    .filter(([y,m]) => !D.meses[_k(y,m)])
+    .map(([y,m]) => sbCarregarMes(y,m)));
 }
 
 async function sbCarregarAuxiliares(){
@@ -754,16 +758,34 @@ const prevDia=()=>PREV.length?PREV.reduce((a,b)=>a+b.v,0)/PREVDIV:0;
 const futuro=(y,m,d)=>y>HOJE.y||(y===HOJE.y&&(m>HOJE.m||(m===HOJE.m&&d>HOJE.d)));
 
 /* saldo: abertura + acumulado, com previsão nos dias futuros */
+/* âncora: único mês com abertura fixa. Antes dele não há o que herdar. */
+const ANCORA={y:2025,m:1,v:3084.17};
+function aberturaDe(y,m){
+  // âncora tem valor fixo; todo mês herda o fechamento do anterior
+  if(y===ANCORA.y&&m===ANCORA.m) return ANCORA.v;
+  let py=y,pm=m-1; if(pm<1){pm=12;py--;}
+  const ant=D.meses[key(py,pm)];
+  if(ant) return ant.dias[ant.dias.length-1].saldo;
+  // mês anterior não carregado: se este é anterior à âncora, 0; senão âncora como piso
+  return (y*12+m) < (ANCORA.y*12+ANCORA.m) ? 0 : ANCORA.v;
+}
 function recalc(y,m){
   const mm=D.meses[key(y,m)];if(!mm)return;
-  if(mm.abertura===undefined)mm.abertura=0;
+  mm.abertura=aberturaDe(y,m);
   const pd=prevDia();let acc=mm.abertura;
   mm.dias.forEach(x=>{
     x.prev=(futuro(y,m,x.d)&&pd>0)?Math.round(pd*100)/100:0;
     acc+=ORD.reduce((a,c)=>a+SIG[c]*x[c],0)-x.prev;
     x.saldo=Math.round(acc*100)/100;});
 }
-function recalcTudo(){Object.keys(D.meses).forEach(k=>{const[y,m]=k.split('-').map(Number);recalc(y,m);});}
+/* recalcula em ordem cronológica: a cascata exige que o mês anterior
+   já tenha seu fechamento calculado antes do seguinte */
+function recalcTudo(){
+  Object.keys(D.meses)
+    .map(k=>k.split('-').map(Number))
+    .sort((a,b)=>(a[0]*12+a[1])-(b[0]*12+b[1]))
+    .forEach(([y,m])=>recalc(y,m));
+}
 /* dados chegam do Supabase */
 
 function tot(y,m){const mm=D.meses[key(y,m)];const t={entrada:0,saida:0,diario:0,economia:0,prev:0};
@@ -1168,6 +1190,7 @@ function aba(t){
     document.getElementById('s-'+v).hidden=(v!==t));
   window.scrollTo(0,0);}
 function render(){document.getElementById('mt').textContent=AB[mes-1]+'/'+String(ano).slice(2);
+  document.getElementById('calBtn').textContent=HOJE.d;
   saldos();totais();tags();pintaGrade();}
 
 /* ═══ indicador de sincronia ═══ */
