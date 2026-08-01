@@ -138,6 +138,26 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .pat{padding:20px}
 .patbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:14px}
 .patbar .sp{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--sub)}
+.mespick{font-family:inherit;font-size:13px;padding:6px 12px;border-radius:8px;
+  border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;
+  min-width:82px;transition:border-color .15s,background .15s}
+.mespick:hover{background:var(--wk);border-color:var(--sub)}
+.calpop{position:fixed;z-index:120;background:var(--bg);border:1px solid var(--line);
+  border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.4);padding:12px;width:260px;
+  opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .15s,transform .15s}
+.calpop.on{opacity:1;transform:none;pointer-events:auto}
+.calhd{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 10px}
+.calhd b{font-size:15px;font-weight:600}
+.calhd button{background:none;border:none;color:var(--fg);font-size:18px;cursor:pointer;
+  padding:3px 9px;border-radius:7px;line-height:1;transition:background .13s}
+.calhd button:hover{background:var(--wk)}
+.calgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.calgrid button{background:none;border:1px solid transparent;border-radius:9px;padding:10px 0;
+  font-family:inherit;font-size:13px;color:var(--fg);cursor:pointer;text-transform:capitalize;
+  transition:background .12s,border-color .12s}
+.calgrid button:hover{background:var(--wk)}
+.calgrid button.sel{background:var(--laranja);color:#fff;font-weight:600}
+.calgrid button:disabled{color:var(--sub);opacity:.3;cursor:default}
 .patbar select{font-family:inherit;font-size:13px;padding:6px 9px;border-radius:7px;
   border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 .ptable td.lbl{position:relative;min-width:170px}
@@ -359,8 +379,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 <div id="v-patrimonio" hidden>
   <div class="pat">
     <div class="patbar"><div style="font-size:15px;font-weight:600">patrimônio</div>
-      <div class="sp"><span>de</span><select id="patIni"></select>
-        <span>até</span><select id="patFim"></select></div>
+      <div class="sp"><span>de</span><button class="mespick" id="patIni"></button><span>até</span><button class="mespick" id="patFim"></button></div>
     </div>
     <div class="patgrid">
       <div>
@@ -1006,11 +1025,6 @@ function patDivida(y,m){let d=0;
   D.patrimonio.forEach(l=>{if(l.cat==='saldo_devedor')d+=pv(l,y,m);});return d;}
 function patLiquido(y,m){return patBruto(y,m)-patDivida(y,m);}
 
-function optsMes(sel,cur){let s='';
-  for(let i=0;i<48;i++){const c=mAdd(PBASE.y,PBASE.m,i);
-    s+=`<option value="${c.y}-${c.m}" ${c.y===cur.y&&c.m===cur.m?'selected':''}>`+
-       `${AB[c.m-1]}/${String(c.y).slice(2)}</option>`;}
-  sel.innerHTML=s;}
 function colunas(){
   const a=mIdx(patIni.y,patIni.m),b=mIdx(patFim.y,patFim.m),out=[];
   for(let i=a;i<=b&&out.length<24;i++)out.push({y:Math.floor(i/12),m:i%12+1});
@@ -1109,13 +1123,51 @@ function patrimonio(){
     `<div class="mrow"><span class="l" style="color:var(--sub);font-weight:400">variação no mês</span>`+
     `<span class="num ${pl-pant>=0?'tpos':'tneg'}">${rs(pl-pant)}</span></div>`;
 }
+
+function rotuloMes(c){return AB[c.m-1]+'/'+String(c.y).slice(2);}
+let _calPop=null;
+function abrirCal(btn,atual,limite,onPick){
+  // limite: {min?,max?} em índice de mês para desabilitar fora da faixa
+  if(_calPop){_calPop.remove();_calPop=null;}
+  let vy=atual.y;
+  const pop=document.createElement('div');
+  pop.className='calpop';
+  document.body.appendChild(pop);
+  _calPop=pop;
+  function desenha(){
+    pop.innerHTML=`<div class="calhd"><button data-a="-1">‹</button>
+      <b>${vy}</b><button data-a="1">›</button></div>
+      <div class="calgrid">${AB.map((nome,i)=>{
+        const idx=vy*12+i, sel=(vy===atual.y&&i+1===atual.m);
+        const dis=(limite.min!==undefined&&idx<limite.min)||(limite.max!==undefined&&idx>limite.max);
+        return `<button data-m="${i+1}" ${dis?'disabled':''} class="${sel?'sel':''}">${nome}</button>`;
+      }).join('')}</div>`;
+    pop.querySelector('[data-a="-1"]').onclick=()=>{vy--;desenha();};
+    pop.querySelector('[data-a="1"]').onclick=()=>{vy++;desenha();};
+    pop.querySelectorAll('[data-m]').forEach(b=>{if(!b.disabled)b.onclick=()=>{
+      onPick({y:vy,m:+b.dataset.m});fecharCal();};});
+  }
+  desenha();
+  // posicionar sob o botão
+  const r=btn.getBoundingClientRect();
+  pop.style.left=Math.min(r.left,window.innerWidth-276)+'px';
+  pop.style.top=(r.bottom+6)+'px';
+  requestAnimationFrame(()=>pop.classList.add('on'));
+  setTimeout(()=>document.addEventListener('mousedown',fora),0);
+}
+function fora(e){if(_calPop&&!_calPop.contains(e.target))fecharCal();}
+function fecharCal(){if(_calPop){_calPop.classList.remove('on');
+  document.removeEventListener('mousedown',fora);
+  const p=_calPop;_calPop=null;setTimeout(()=>p.remove(),150);}}
+
 function patSel(){
   const a=document.getElementById('patIni'),b=document.getElementById('patFim');
-  optsMes(a,patIni);optsMes(b,patFim);
-  a.onchange=()=>{const[y,m]=a.value.split('-').map(Number);patIni={y,m};
-    if(mIdx(y,m)>mIdx(patFim.y,patFim.m)){patFim={y,m};optsMes(b,patFim);}patrimonio();};
-  b.onchange=()=>{const[y,m]=b.value.split('-').map(Number);patFim={y,m};
-    if(mIdx(y,m)<mIdx(patIni.y,patIni.m)){patIni={y,m};optsMes(a,patIni);}patrimonio();};
+  a.textContent=rotuloMes(patIni);
+  b.textContent=rotuloMes(patFim);
+  a.onclick=()=>abrirCal(a,patIni,{max:mIdx(patFim.y,patFim.m)},c=>{
+    patIni=c;patSel();patrimonio();});
+  b.onclick=()=>abrirCal(b,patFim,{min:mIdx(patIni.y,patIni.m)},c=>{
+    patFim=c;patSel();patrimonio();});
 }
 
 /* ── horizonte ── */
@@ -1178,6 +1230,7 @@ async function irPara(y,m){
   ano=y;mes=m;render();
 }
 function ligarEventos(){
+  const _hz=document.getElementById('hzN');if(_hz)_hz.onchange=e=>{hzN=+e.target.value;horizonte();};
   document.getElementById('pv').onclick=()=>{let y=ano,m=mes-1;if(m<1){m=12;y--;}irPara(y,m);};
   document.getElementById('nx').onclick=()=>{let y=ano,m=mes+1;if(m>12){m=1;y++;}irPara(y,m);};
   document.getElementById('hoje').onclick=()=>irPara(HOJE.y,HOJE.m);

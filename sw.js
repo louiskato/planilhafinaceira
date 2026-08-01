@@ -1,5 +1,5 @@
 /* Service worker da versão desktop */
-const CACHE = 'financeira-web-v4';
+const CACHE = 'financeira-web-v5';
 const CASCA = ['/', '/index.html', '/manifest.json',
   '/icons/icon-192.png', '/icons/icon-512.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'];
