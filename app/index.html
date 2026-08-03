@@ -411,6 +411,8 @@ section[id^=s-]{animation:fade .22s var(--e)}
   <button class="mrow" id="mPerfil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>editar perfil<span class="ar">›</span></button>
   <button class="mrow" id="mPrev"><span class="dot d-prev" style="width:22px;height:22px">D</span>
     <span>previsão de diário<span class="sb" id="prevSub">—</span></span><span class="ar">›</span></button>
+  <button class="mrow" id="mAssin"><span class="dot d-prev" style="width:22px;height:22px">A</span>
+    <span>assinaturas previstas<span class="sb" id="assinSub">—</span></span><span class="ar">›</span></button>
   <a class="mrow" href="/" style="text-decoration:none">
     <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
     versão completa (patrimônio)<span class="ar">›</span></a>
@@ -459,6 +461,18 @@ section[id^=s-]{animation:fade .22s var(--e)}
       color:var(--fg);cursor:pointer;display:flex;width:100%;justify-content:space-between">
       <span>dividido por</span><span style="font-weight:400;color:var(--sub)"><span id="pvDivN">30</span> dias ▾</span></button></div>
     <div class="pvtot num" id="pvRes">R$ 0,00</div>
+  </div>
+</div>
+
+<div class="fs" id="fsAssin">
+  <div class="fsh"><button data-close="fsAssin" aria-label="Voltar">←</button><h2>assinaturas previstas</h2>
+    <button id="asAdd" aria-label="Adicionar assinatura">+</button></div>
+  <div style="padding:10px 16px;color:var(--sub);font-size:13.5px;line-height:1.5">
+    valores que vão cair na fatura mas ainda não caíram. aparecem como sombra nos meses.
+    quando um cai de verdade, confirme — vira lançamento real só naquele mês.</div>
+  <div id="asList" style="flex:1"></div>
+  <div class="pvfoot">
+    <div class="pvline"><span>total previsto por mês</span><span class="num" id="asTot">R$ 0,00</span></div>
   </div>
 </div>
 
@@ -511,7 +525,7 @@ const SB = (typeof supabase !== 'undefined' && !SUPABASE_URL.startsWith('COLE'))
   : null;
 
 let D = { meses:{}, patrimonio:[] };
-let TAGS = [], PREV = [], PREVDIV = 30, CARTOES = [];
+let TAGS = [], PREV = [], PREVDIV = 30, CARTOES = [], REC = [], ASSIN = [], ACONF = {};
 let USER = null;
 
 const _k = (y,m) => `${y}-${m}`;
@@ -543,6 +557,52 @@ async function sbLogout(){ await SB.auth.signOut(); USER = null; location.reload
    D.meses['2026-7'] = { dias:[{d,entrada,saida,cartao,economia,diario,
                                 saldo,prev,mov:[...]}], metaDia, metaEco, abertura }
    ─────────────────────────────────────────────────────────────── */
+/* aplica as regras de recorrência a um mês, gerando movimentos "virtuais"
+   (marcados com rec:id — não são linhas do banco, são derivados da regra) */
+function aplicarRecorrencias(ano, mes, dias){
+  const primeiro=`${ano}-${_pad(mes)}-01`;
+  const ultimo=`${ano}-${_pad(mes)}-${_pad(_ultimoDia(ano,mes))}`;
+  REC.forEach(r=>{
+    // a regra vale neste mês?
+    if(r.inicio > ultimo) return;
+    if(r.fim && r.fim < primeiro) return;
+    const addDia=(d)=>{
+      if(d<1||d>dias.length) return;
+      const dataStr=`${ano}-${_pad(mes)}-${_pad(d)}`;
+      if(dataStr < r.inicio) return;
+      if(r.fim && dataStr > r.fim) return;
+      const dia=dias[d-1];
+      dia[r.tipo]+=r.valor;
+      dia.mov.push({ id:'rec:'+r.id+':'+dataStr, rec:r.id, t:r.tipo, v:r.valor,
+        desc:r.nome, tag:r.tagId });
+    };
+    if(r.freq==='mensalmente'){
+      // dia_ref pode ser 29-31 em meses curtos: cai no último dia
+      addDia(Math.min(r.diaRef||1, dias.length));
+    } else if(r.freq==='semanalmente'){
+      for(let d=1; d<=dias.length; d++){
+        if(new Date(ano,mes-1,d).getDay()===(r.diaRef||0)) addDia(d);
+      }
+    } else if(r.freq==='diariamente'){
+      for(let d=1; d<=dias.length; d++) addDia(d);
+    }
+  });
+}
+
+/* assinaturas previstas: aparecem como SOMBRA nos dias, exceto onde já confirmadas.
+   marcadas com assin:id — não são lançamentos, são projeção (como a previsão de diário) */
+function aplicarAssinaturas(ano, mes, dias){
+  ASSIN.forEach(a=>{
+    // confirmada neste mês? então não é mais sombra (já virou lançamento real)
+    if(ACONF[`${a.id}:${ano}:${mes}`]) return;
+    const d=Math.min(a.dia||1, dias.length);
+    const dia=dias[d-1];
+    dia.assinPrev=(dia.assinPrev||0)+a.valor;
+    dia.mov.push({ id:'assin:'+a.id+':'+ano+'-'+mes, assin:a.id, t:a.tipo,
+      v:a.valor, desc:a.nome, tag:null, previsto:true });
+  });
+}
+
 async function sbCarregarMes(ano, mes){
   const ini = `${ano}-${_pad(mes)}-01`;
   const fim = `${ano}-${_pad(mes)}-${_pad(_ultimoDia(ano,mes))}`;
@@ -565,6 +625,11 @@ async function sbCarregarMes(ano, mes){
     dia[l.tipo] += v;
     dia.mov.push({ id:l.id, t:l.tipo, v, desc:l.nome||'', tag:l.tag_id||null });
   });
+
+  // sobrepõe os lançamentos gerados pelas regras de recorrência
+  aplicarRecorrencias(ano, mes, dias);
+  // sobrepõe as assinaturas previstas ainda não confirmadas (sombra, não lançamento)
+  aplicarAssinaturas(ano, mes, dias);
 
   D.meses[_k(ano,mes)] = {
     dias,
@@ -599,14 +664,24 @@ async function sbCarregarJanela(ano, mes, antes=1, depois=8){
 }
 
 async function sbCarregarAuxiliares(){
-  const [tags, prev, pref, cart, contas, valores] = await Promise.all([
+  const [tags, prev, pref, cart, contas, valores, recs, assin, aconf] = await Promise.all([
     SB.from('tags').select('*').order('nome'),
     SB.from('previsao_itens').select('*').order('ordem'),
     SB.from('preferencias').select('*').maybeSingle(),
     SB.from('cartoes').select('*').eq('ativo',true).order('nome'),
     SB.from('patrimonio_contas').select('*').eq('ativa',true).order('ordem'),
-    SB.from('patrimonio_valores').select('*')
+    SB.from('patrimonio_valores').select('*'),
+    SB.from('recorrencias').select('*').eq('ativa',true),
+    SB.from('assinaturas').select('*').eq('ativa',true).order('ordem'),
+    SB.from('assinaturas_confirmadas').select('*')
   ]);
+  REC = (recs.data||[]).map(r => ({ id:r.id, tipo:r.tipo, valor:Number(r.valor),
+    nome:r.nome||'', tagId:r.tag_id||null, freq:r.frequencia, diaRef:r.dia_ref,
+    inicio:r.data_inicio, fim:r.data_fim }));
+  ASSIN = (assin.data||[]).map(a => ({ id:a.id, nome:a.nome, valor:Number(a.valor),
+    dia:a.dia, tipo:a.tipo }));
+  ACONF = {};
+  (aconf.data||[]).forEach(c => { ACONF[`${c.assinatura_id}:${c.ano}:${c.mes}`] = c.lancamento_id||true; });
   TAGS = (tags.data||[]).map(t => ({ id:t.id, nome:t.nome, cor:t.cor, areas:t.areas }));
   PREV = (prev.data||[]).map(p => ({ id:p.id, n:p.nome, v:Number(p.valor_mensal) }));
   PREVDIV = pref.data?.previsao_divisor ?? 30;
@@ -618,6 +693,57 @@ async function sbCarregarAuxiliares(){
       .forEach(v => { vals[`${v.ano}-${v.mes}`] = Number(v.valor); });
     return { id:c.id, cat:c.categoria, nome:c.nome, vals };
   });
+}
+
+/* ── RECORRÊNCIAS ───────────────────────────────────────────── */
+async function sbSalvarRecorrencia(r){   // {id?, tipo, valor, nome, tagId, freq, diaRef, inicio, fim}
+  const linha={ tipo:r.tipo, valor:r.valor, nome:r.nome||null, tag_id:r.tagId||null,
+    frequencia:r.freq, dia_ref:r.diaRef??null, data_inicio:r.inicio, data_fim:r.fim||null };
+  if(r.id){
+    await SB.from('recorrencias').update(linha).eq('id',r.id);
+  }else{
+    const { data } = await SB.from('recorrencias')
+      .insert({ user_id: await uidAtual(), ...linha }).select().single();
+    r.id=data?.id;
+  }
+  return r;
+}
+async function sbApagarRecorrencia(id){
+  await SB.from('recorrencias').update({ ativa:false }).eq('id',id);
+}
+
+/* ── ASSINATURAS PREVISTAS ──────────────────────────────────── */
+async function sbSalvarAssinatura(a){   // {id?, nome, valor, dia, tipo}
+  const linha={ nome:a.nome, valor:a.valor, dia:a.dia||1, tipo:a.tipo||'saida' };
+  if(a.id){
+    await SB.from('assinaturas').update(linha).eq('id',a.id);
+  }else{
+    const { data } = await SB.from('assinaturas')
+      .insert({ user_id: await uidAtual(), ...linha, ordem:ASSIN.length }).select().single();
+    a.id=data?.id;
+  }
+  return a;
+}
+async function sbApagarAssinatura(id){
+  await SB.from('assinaturas').update({ ativa:false }).eq('id',id);
+}
+/* confirmar: a assinatura "caiu" neste mês → vira lançamento real e sai da previsão */
+async function sbConfirmarAssinatura(a, ano, mes){
+  const dia=Math.min(a.dia||1, _ultimoDia(ano,mes));
+  const novo=await sbNovoLancamento({ano,mes,dia,tipo:a.tipo,valor:a.valor,nome:a.nome,tagId:null});
+  await SB.from('assinaturas_confirmadas').upsert({
+    assinatura_id:a.id, user_id: await uidAtual(), ano, mes, lancamento_id:novo.id
+  }, { onConflict:'assinatura_id,ano,mes' });
+  ACONF[`${a.id}:${ano}:${mes}`]=novo.id;
+  return novo;
+}
+/* desfazer confirmação: remove o lançamento e volta a ser previsão */
+async function sbDesconfirmarAssinatura(a, ano, mes){
+  const lancId=ACONF[`${a.id}:${ano}:${mes}`];
+  if(lancId && typeof lancId==='string'){ try{ await sbApagarLancamento(lancId); }catch(e){} }
+  await SB.from('assinaturas_confirmadas').delete()
+    .eq('assinatura_id',a.id).eq('ano',ano).eq('mes',mes);
+  delete ACONF[`${a.id}:${ano}:${mes}`];
 }
 
 /* ── GRAVAR ─────────────────────────────────────────────────── */
@@ -775,7 +901,8 @@ function recalc(y,m){
   const pd=prevDia();let acc=mm.abertura;
   mm.dias.forEach(x=>{
     x.prev=(futuro(y,m,x.d)&&pd>0)?Math.round(pd*100)/100:0;
-    acc+=ORD.reduce((a,c)=>a+SIG[c]*x[c],0)-x.prev;
+    // assinaturas previstas descontam do saldo projetado (previsão, não lançamento)
+    acc+=ORD.reduce((a,c)=>a+SIG[c]*x[c],0)-x.prev-(x.assinPrev||0);
     x.saldo=Math.round(acc*100)/100;});
 }
 /* recalcula em ordem cronológica: a cascata exige que o mês anterior
@@ -796,12 +923,35 @@ const fx=(v,r)=>v<0?'neg':(v<r?'war':'pos');
 let toastT;
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');
   clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1500);}
-function open_(id){document.getElementById(id).classList.add('on');}
-function close_(id){document.getElementById(id).classList.remove('on');}
-
+/* pilha de sobreposições abertas, para o botão "voltar" fechar em vez de sair */
+let _pilha=[];
+function _empurra(tipo,id){
+  _pilha.push({tipo,id});
+  history.pushState({sobre:true,n:_pilha.length},'');
+}
+function open_(id){document.getElementById(id).classList.add('on');_empurra('fs',id);}
+function close_(id){
+  document.getElementById(id).classList.remove('on');
+  // remove da pilha e recua o histórico se este era o topo
+  const i=_pilha.map(x=>x.id).lastIndexOf(id);
+  if(i>=0){_pilha.splice(i,1); if(history.state&&history.state.sobre) history.back();}
+}
 function sheet(html){document.getElementById('sh').innerHTML=html;
-  document.getElementById('ov').classList.add('on');}
-function closeSheet(){document.getElementById('ov').classList.remove('on');}
+  document.getElementById('ov').classList.add('on');_empurra('sheet','ov');}
+function closeSheet(){
+  const el=document.getElementById('ov');
+  if(!el.classList.contains('on'))return;
+  el.classList.remove('on');
+  const i=_pilha.map(x=>x.id).lastIndexOf('ov');
+  if(i>=0){_pilha.splice(i,1); if(history.state&&history.state.sobre) history.back();}
+}
+/* botão "voltar" do navegador: fecha a última sobreposição, não sai do site */
+window.addEventListener('popstate',()=>{
+  const top=_pilha.pop();
+  if(!top)return;   // nada aberto: deixa o voltar seguir normalmente
+  if(top.tipo==='sheet'){document.getElementById('ov').classList.remove('on');}
+  else{document.getElementById(top.id).classList.remove('on');}
+});
 
 
 /* ── saldos ── */
@@ -839,6 +989,32 @@ function pickCol(cb){
 
 /* ── dia ── */
 function openDay(i){dayIdx=i;dayCol=col;renderDay();open_('fsDay');}
+function gerenciarRegra(recId){
+  const r=REC.find(x=>x.id===recId);if(!r)return;
+  const freqTxt={mensalmente:'todo mês',semanalmente:'toda semana',diariamente:'todo dia'}[r.freq];
+  sheet(`<div class="shh"><h2>lançamento recorrente</h2>
+      <button class="x" onclick="closeSheet()">✕</button></div>
+    <div style="padding:6px 16px 14px">
+      <div style="font-size:17px;font-weight:600">${r.nome||CAT[r.tipo].s}</div>
+      <div style="color:var(--sub);font-size:14px;margin-top:4px">
+        ${rs(r.valor)} · ${CAT[r.tipo].n} · ${freqTxt}</div>
+      <div style="color:var(--sub);font-size:13px;margin-top:2px">
+        até ${r.fim?r.fim.split('-').reverse().join('/'):'sem fim'}</div>
+    </div>
+    <button class="cta" style="background:#E4634A" id="regDel">encerrar recorrência</button>
+    <div style="text-align:center;color:var(--sub);font-size:12.5px;padding:2px 16px 14px">
+      os lançamentos já passados continuam; para de repetir daqui pra frente.</div>`);
+  document.getElementById('regDel').onclick=async()=>{
+    sync('busy');
+    try{ await sbApagarRecorrencia(r.id); }
+    catch(e){ sync('off'); toast('erro: '+e.message); return; }
+    REC=REC.filter(x=>x.id!==r.id);
+    const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
+    await sbCarregarJanela(ano,mes,1,8);recalcTudo();
+    closeSheet();close_('fsDay');toast('recorrência encerrada');render();sync('on');
+  };
+}
+
 function renderDay(){
   const x=M().dias[dayIdx];
   document.getElementById('dayTitle').textContent=
@@ -857,15 +1033,18 @@ function renderDay(){
     const dd=String(x.d).padStart(2,'0')+'/'+String(mes).padStart(2,'0');
     body.innerHTML=lista.map(m=>{
       const tg=m.tag?TAGS.find(t=>t.id===m.tag):null;
-      return `<button class="mvrow" data-j="${m.j}">
-        <div class="mvtop"><span class="dot d-${m.t}">${CAT[m.t].i}</span>
-          <b>${m.desc||CAT[m.t].s}</b>
+      const isRec=!!m.rec;
+      return `<button class="mvrow" data-j="${m.j}" data-rec="${m.rec||''}">
+        <div class="mvtop"><span class="dot ${isRec?'d-prev':'d-'+m.t}">${CAT[m.t].i}</span>
+          <b>${m.desc||CAT[m.t].s}${isRec?' <span style="font-size:12px;color:var(--sub);font-weight:400">· recorrente</span>':''}</b>
           <span class="vl">${rs(m.v)}</span></div>
         <div class="mvsub"><span>${dd}</span><span>${CAT[m.t].s}</span></div>
         ${tg?`<div style="padding-left:31px"><span class="chip" style="background:${tg.cor}">${tg.nome}</span></div>`:''}
       </button>`;}).join('');
     body.querySelectorAll('.mvrow').forEach(b=>b.onclick=()=>{
-      const m=x.mov[+b.dataset.j];novo(m.t,{...m,j:+b.dataset.j,edit:true});});
+      const m=x.mov[+b.dataset.j];
+      if(m.rec){gerenciarRegra(m.rec);return;}
+      novo(m.t,{...m,j:+b.dataset.j,edit:true});});
   }
 }
 
@@ -1043,6 +1222,104 @@ function addPrev(i){
 
 function quantDias(){return M().dias.length;}
 
+/* ── assinaturas previstas ── */
+function renderAssin(){
+  const box=document.getElementById('asList');
+  if(!ASSIN.length){
+    box.innerHTML=`<div class="empty" style="flex:1;background:var(--bg2)">
+      <button class="ecirc" id="asAdd2"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <p>cadastre assinaturas e contas que caem todo mês na fatura, como Spotify, academia, streamings.</p></div>`;
+    document.getElementById('asAdd2').onclick=()=>addAssin();
+  }else{
+    const confMes=a=>!!ACONF[`${a.id}:${ano}:${mes}`];
+    box.innerHTML=ASSIN.map((a,i)=>{
+      const caiu=confMes(a);
+      return `<div class="pvrow" style="display:flex;align-items:center;gap:10px;cursor:default">
+        <button data-edit="${i}" style="flex:1;display:flex;justify-content:space-between;
+          align-items:center;background:none;border:none;font:inherit;color:var(--fg);cursor:pointer;
+          ${caiu?'opacity:.4':''}">
+          <span>${a.nome}<span style="color:var(--sub);font-size:12px"> · dia ${a.dia}</span></span>
+          <span class="num">${rs(a.valor)}</span></button>
+        <button data-conf="${i}" style="border:none;border-radius:99px;padding:6px 12px;
+          font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+          ${caiu?'background:var(--wk);color:var(--sub)':'background:var(--verde);color:var(--verde-t)'}">
+          ${caiu?'✓ caiu':'confirmar'}</button>
+      </div>`;}).join('');
+    box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>addAssin(+b.dataset.edit));
+    box.querySelectorAll('[data-conf]').forEach(b=>b.onclick=()=>toggleConfirma(+b.dataset.conf));
+  }
+  const t=ASSIN.reduce((a,b)=>a+b.valor,0);
+  document.getElementById('asTot').textContent=rs(t);
+  const sub=document.getElementById('assinSub');
+  if(sub)sub.textContent=ASSIN.length?rs(t)+'/mês':'—';
+}
+
+async function toggleConfirma(i){
+  const a=ASSIN[i], jaCaiu=!!ACONF[`${a.id}:${ano}:${mes}`];
+  sync('busy');
+  try{
+    if(jaCaiu){ await sbDesconfirmarAssinatura(a,ano,mes); toast(a.nome+' voltou a previsto'); }
+    else{ await sbConfirmarAssinatura(a,ano,mes); toast(a.nome+' confirmado em '+AB[mes-1]); }
+    // recarregar o mês para materializar a mudança
+    delete D.meses[key(ano,mes)];
+    await sbCarregarMes(ano,mes); recalcTudo();
+    renderAssin(); render(); sync('on');
+  }catch(e){ sync('off'); toast('erro: '+e.message); }
+}
+
+let _novaAssinTmp=null;
+function addAssin(i){
+  const ed=i!==undefined;
+  const a=ed?ASSIN[i]:(_novaAssinTmp||{nome:'',valor:0,dia:10,tipo:'saida'});
+  if(!ed)_novaAssinTmp=null;
+  sheet(`<div class="bigamt"><span class="cur">R$</span>
+     <input id="asV" inputmode="decimal" value="${a.valor?brl(a.valor):''}" placeholder="0,00">
+     <button class="x" onclick="closeSheet()" style="background:none;border:none;font-size:22px;
+       color:var(--sub);cursor:pointer;line-height:1">✕</button></div>
+   <div class="linerow"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg>
+     <input id="asN" value="${a.nome}" placeholder="nome (ex: Spotify)"></div>
+   <button class="linerow" id="asDia" style="width:100%;background:none;border:none;
+     border-top:1px solid var(--line);text-align:left;color:var(--fg);cursor:pointer">
+     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+     cai no dia <span style="margin-left:auto;color:var(--sub)" id="asDiaN">${a.dia}</span></button>
+   <button class="ctaslim" id="asOk">${ed?'salvar':'adicionar'} assinatura</button>
+   ${ed?'<button class="del" id="asDel">excluir</button>':'<div style="height:6px"></div>'}`);
+  setTimeout(()=>document.getElementById('asV').focus(),80);
+  let dia=a.dia;
+  document.getElementById('asDia').onclick=()=>{
+    const nomeAtual=document.getElementById('asN').value;
+    const valAtual=document.getElementById('asV').value;
+    let opts='';for(let d=1;d<=31;d++)opts+=`<button class="opt" data-d="${d}" style="padding-left:15px"><b>dia ${d}</b></button>`;
+    sheet(`<div class="shh"><h2>dia da fatura</h2><button class="x" onclick="closeSheet()">✕</button></div>`+opts);
+    document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{
+      const escolhido={...(ed?ASSIN[i]:{}),nome:nomeAtual,valor:parse(valAtual),dia:+b.dataset.d,tipo:'saida'};
+      if(ed){ASSIN[i]=escolhido;addAssin(i);}else{closeSheet();_novaAssinTmp=escolhido;addAssin();}
+    });
+  };
+  document.getElementById('asOk').onclick=async()=>{
+    const n=document.getElementById('asN').value.trim(),v=parse(document.getElementById('asV').value);
+    const dd=+document.getElementById('asDiaN').textContent||dia;
+    if(!n||v<=0){toast('preencha nome e valor');return;}
+    sync('busy');
+    try{
+      if(ed){const it={...ASSIN[i],nome:n,valor:v,dia:dd};await sbSalvarAssinatura(it);ASSIN[i]=it;}
+      else{const it=await sbSalvarAssinatura({nome:n,valor:v,dia:dd,tipo:'saida'});ASSIN.push(it);}
+      // recarregar meses para refletir a sombra
+      const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
+      await sbCarregarJanela(ano,mes,1,8);recalcTudo();
+      closeSheet();renderAssin();render();toast('assinatura salva');sync('on');
+    }catch(e){ sync('off'); toast('erro: '+e.message); }};
+  if(ed)document.getElementById('asDel').onclick=async()=>{
+    try{ if(ASSIN[i].id) await sbApagarAssinatura(ASSIN[i].id); }
+    catch(e){ toast('erro: '+e.message); return; }
+    ASSIN.splice(i,1);
+    const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
+    await sbCarregarJanela(ano,mes,1,8);recalcTudo();
+    closeSheet();renderAssin();render();toast('assinatura removida');};
+}
+
+
+
 
 
 /* ── novo lançamento (pop-up) ── */
@@ -1065,6 +1342,9 @@ function formNovo(){
      data<span class="rv">${x.d}/${mes}/${ano} <span class="cv">▼</span></span></button>
    <button class="frow" id="fRep"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 16l-2-2 2-2"/><path d="M6 14h6a3 3 0 0 1 0 6"/></svg>
      ${form.rep}<span class="rv"><span class="cv">▼</span></span></button>
+   ${(form.rep&&form.rep!=='não repete')?`<button class="frow" id="fAte">
+     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M9 16l2 2 4-4"/></svg>
+     repetir até<span class="rv">${form.ate?form.ate.split('-').reverse().join('/'):'dez/2027'} <span class="cv">▼</span></span></button>`:''}
    <button class="frow" id="fTag" style="${tg?'border-bottom:none':''}">
      <svg viewBox="0 0 24 24"><path d="M3 8v8l7 4 9-8-9-8-7 4z"/></svg>
      tags<span class="rv"><span class="cv">▼</span></span></button>
@@ -1101,6 +1381,18 @@ function formNovo(){
         <span class="tflag" style="background:${y.cor}"></span><b>${y.nome}</b></button>`).join(''));
     document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{
       form.tag=b.dataset.n||null;closeSheet();formNovo();});};
+  const _fAte=document.getElementById('fAte');
+  if(_fAte)_fAte.onclick=()=>{sync();
+    // opções: próximos 24 meses
+    let opts='';const hoje=new Date();
+    for(let i=1;i<=24;i++){const dt=new Date(ano,mes-1+i,0);
+      const y=dt.getFullYear(),m=dt.getMonth()+1;
+      const val=`${y}-${_pad(m)}-${_pad(_ultimoDia(y,m))}`;
+      opts+=`<button class="opt" data-v="${val}" style="padding-left:15px">
+        <b>${AB[m-1]}/${y}</b></button>`;}
+    sheet(`<div class="shh"><h2>repetir até</h2><button class="x" onclick="closeSheet()">✕</button></div>`+opts);
+    document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{
+      form.ate=b.dataset.v;closeSheet();formNovo();});};
   document.getElementById('ctaBtn').onclick=()=>{sync();salvar();};
   if(form.edit)document.getElementById('delMov').onclick=async()=>{
     const d=M().dias[form.idx],mv=d.mov[form.j];
@@ -1127,7 +1419,29 @@ async function salvar(){
   }
   if(form.valor<=0){toast('informe um valor');return;}
   sync('busy');
-  sync('busy');
+  // ── lançamento recorrente: cria uma REGRA, não uma linha única ──
+  if(!form.edit && form.rep && form.rep!=='não repete'){
+    const x=M().dias[form.idx];
+    const inicio=`${ano}-${String(mes).padStart(2,'0')}-${String(x.d).padStart(2,'0')}`;
+    const fim=form.ate || `2027-12-31`;
+    const diaRef = form.rep==='mensalmente' ? x.d
+                 : form.rep==='semanalmente' ? new Date(ano,mes-1,x.d).getDay()
+                 : null;
+    try{
+      const regra=await sbSalvarRecorrencia({tipo:form.tipo,valor:form.valor,
+        nome:form.desc.trim(),tagId:form.tag,freq:form.rep,diaRef,inicio,fim});
+      REC.push({id:regra.id,tipo:form.tipo,valor:form.valor,nome:form.desc.trim(),
+        tagId:form.tag,freq:form.rep,diaRef,inicio,fim});
+      // recarregar os meses em memória para materializar a regra
+      const chaves=Object.keys(D.meses);
+      for(const k of chaves){delete D.meses[k];}
+      await sbCarregarJanela(ano,mes,1,8);
+      recalcTudo();close_('fsNew');
+      toast(`${CAT[form.tipo].s} recorrente criado (${form.rep})`);
+      render();sync('on');
+    }catch(e){ sync('off'); toast('erro: '+e.message); }
+    return;
+  }
   try{
     if(form.edit&&antigo?.id){
       await sbEditarLancamento(antigo.id,{tipo:form.tipo,valor:form.valor,
@@ -1235,6 +1549,8 @@ function ligarEventos(){
   // menu
   document.getElementById('mPerfil').onclick=()=>open_('fsPerfil');
   document.getElementById('mPrev').onclick=()=>{renderPrev();open_('fsPv');};
+  document.getElementById('mAssin').onclick=()=>{renderAssin();open_('fsAssin');};
+  document.getElementById('asAdd').onclick=()=>addAssin();
   document.getElementById('mConf').onclick=()=>open_('fsConf');
   document.getElementById('mSair').onclick=()=>sbLogout();
   document.getElementById('cfDados').onclick=()=>open_('fsDados');
