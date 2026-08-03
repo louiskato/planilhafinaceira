@@ -472,6 +472,11 @@ section[id^=s-]{animation:fade .22s var(--e)}
     quando um cai de verdade, confirme — vira lançamento real só naquele mês.</div>
   <div id="asList" style="flex:1"></div>
   <div class="pvfoot">
+    <button class="pvline" id="asVenc" style="width:100%;background:none;border:none;
+      border-bottom:1px solid var(--line);color:var(--fg);font:inherit;cursor:pointer;
+      display:flex;justify-content:space-between;align-items:center">
+      <span>caem no dia da fatura</span>
+      <span class="num" id="asVencN" style="color:var(--btn)">—</span></button>
     <div class="pvline"><span>total previsto por mês</span><span class="num" id="asTot">R$ 0,00</span></div>
   </div>
 </div>
@@ -525,7 +530,7 @@ const SB = (typeof supabase !== 'undefined' && !SUPABASE_URL.startsWith('COLE'))
   : null;
 
 let D = { meses:{}, patrimonio:[] };
-let TAGS = [], PREV = [], PREVDIV = 30, CARTOES = [], REC = [], ASSIN = [], ACONF = {};
+let TAGS = [], PREV = [], PREVDIV = 30, CARTOES = [], REC = [], ASSIN = [], ACONF = {}, VENC = null;
 let USER = null;
 
 const _k = (y,m) => `${y}-${m}`;
@@ -595,7 +600,9 @@ function aplicarAssinaturas(ano, mes, dias){
   ASSIN.forEach(a=>{
     // confirmada neste mês? então não é mais sombra (já virou lançamento real)
     if(ACONF[`${a.id}:${ano}:${mes}`]) return;
-    const d=Math.min(a.dia||1, dias.length);
+    // todas as assinaturas caem no vencimento da fatura (se definido); senão, no dia da assinatura
+    const diaAlvo = VENC || a.dia || 1;
+    const d=Math.min(diaAlvo, dias.length);
     const dia=dias[d-1];
     dia.assinPrev=(dia.assinPrev||0)+a.valor;
     dia.mov.push({ id:'assin:'+a.id+':'+ano+'-'+mes, assin:a.id, t:a.tipo,
@@ -685,6 +692,7 @@ async function sbCarregarAuxiliares(){
   TAGS = (tags.data||[]).map(t => ({ id:t.id, nome:t.nome, cor:t.cor, areas:t.areas }));
   PREV = (prev.data||[]).map(p => ({ id:p.id, n:p.nome, v:Number(p.valor_mensal) }));
   PREVDIV = pref.data?.previsao_divisor ?? 30;
+  VENC = pref.data?.venc_fatura ?? null;
   CARTOES = (cart.data||[]).map(c => ({ id:c.id, nome:c.nome,
                 fecha:c.dia_fechamento, vence:c.dia_vencimento }));
   D.patrimonio = (contas.data||[]).map(c => {
@@ -784,6 +792,11 @@ async function sbSalvarPrevisao(item){          // {id?, n, v}
   return item;
 }
 async function sbApagarPrevisao(id){ await SB.from('previsao_itens').delete().eq('id',id); }
+async function sbSalvarVenc(dia){
+  await SB.from('preferencias')
+    .upsert({ user_id: await uidAtual(), venc_fatura:dia }, { onConflict:'user_id' });
+  VENC=dia;
+}
 async function sbSalvarDivisor(n){
   await SB.from('preferencias')
     .upsert({ user_id: await uidAtual(), previsao_divisor:n }, { onConflict:'user_id' });
@@ -1250,6 +1263,22 @@ function renderAssin(){
   }
   const t=ASSIN.reduce((a,b)=>a+b.valor,0);
   document.getElementById('asTot').textContent=rs(t);
+  const vn=document.getElementById('asVencN');
+  if(vn)vn.textContent=VENC?('dia '+VENC):'definir';
+  const vb=document.getElementById('asVenc');
+  if(vb)vb.onclick=()=>{
+    let opts='';for(let d=1;d<=31;d++)
+      opts+=`<button class="opt" data-d="${d}" style="padding-left:16px"><b>dia ${d}</b></button>`;
+    sheet(`<div class="shh"><h2>vencimento da fatura</h2><button class="x" onclick="closeSheet()">✕</button></div>
+      <div style="padding:8px 16px 4px;color:var(--sub);font-size:13px">
+        todas as assinaturas previstas caem neste dia.</div>`+opts);
+    document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=async()=>{
+      const dia=+b.dataset.d;closeSheet();
+      try{ await sbSalvarVenc(dia); }catch(e){ toast('erro: '+e.message); return; }
+      const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
+      await sbCarregarJanela(ano,mes,1,8);recalcTudo();
+      renderAssin();render();toast('vencimento no dia '+dia);});
+  };
   const sub=document.getElementById('assinSub');
   if(sub)sub.textContent=ASSIN.length?rs(t)+'/mês':'—';
 }
@@ -1325,7 +1354,8 @@ function addAssin(i){
 /* ── novo lançamento (pop-up) ── */
 function novo(tipo,ctx){
   form={tipo:tipo||'diario',valor:ctx?.v||0,desc:ctx?.desc||'',
-        rep:'não repete',tag:ctx?.tag||null,idx:dayIdx,edit:ctx?.edit,j:ctx?.j};
+        rep:'não repete',tag:ctx?.tag||null,idx:dayIdx,edit:ctx?.edit,j:ctx?.j,
+        origId:ctx?.id||null, origIdx:dayIdx};   // id e dia originais, fixos
   formNovo();open_('fsNew');
 }
 function formNovo(){
@@ -1404,17 +1434,20 @@ function formNovo(){
     render();renderDay();};
 }
 async function salvar(){
-  const d=M().dias[form.idx],antigo=form.edit?d.mov[form.j]:null;
+  const dNovo=M().dias[form.idx];              // dia de DESTINO (pode ter mudado)
+  const dOrig=M().dias[form.origIdx];           // dia ORIGINAL do lançamento
+  const antigo=form.edit ? (dOrig?.mov.find(m=>m.id===form.origId)||null) : null;
   // zerar um lançamento existente = excluir do banco
   if(form.edit&&form.valor<=0){
     sync('busy');
-    try{ if(antigo?.id) await sbApagarLancamento(antigo.id); }
+    try{ if(form.origId) await sbApagarLancamento(form.origId); }
     catch(e){ sync('off'); toast('erro ao excluir: '+e.message); return; }
-    d.mov.splice(form.j,1);
-    d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
+    if(dOrig){const j=dOrig.mov.findIndex(m=>m.id===form.origId);
+      if(j>=0)dOrig.mov.splice(j,1);
+      dOrig[form.tipo]=dOrig.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);}
     recalc(ano,mes);close_('fsNew');toast('lançamento removido');
     render();sync('on');
-    if(document.getElementById('fsDay')?.classList.contains('on')){dayIdx=form.idx;renderDay();}
+    if(document.getElementById('fsDay')?.classList.contains('on')){dayIdx=form.origIdx;renderDay();}
     return;
   }
   if(form.valor<=0){toast('informe um valor');return;}
@@ -1443,21 +1476,26 @@ async function salvar(){
     return;
   }
   try{
-    if(form.edit&&antigo?.id){
-      await sbEditarLancamento(antigo.id,{tipo:form.tipo,valor:form.valor,
+    if(form.edit&&form.origId){
+      // UPDATE por ID: altera a linha original, muda a data se o dia mudou
+      await sbEditarLancamento(form.origId,{tipo:form.tipo,valor:form.valor,
         nome:form.desc.trim()||null,tag_id:form.tag||null,
-        data:`${ano}-${String(mes).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`});
-      d.mov.splice(form.j,1);
-      d[antigo.t]=d.mov.filter(m=>m.t===antigo.t).reduce((a,b)=>a+b.v,0);
-      d.mov.push({id:antigo.id,t:form.tipo,v:form.valor,desc:form.desc,tag:form.tag});
+        data:`${ano}-${String(mes).padStart(2,'0')}-${String(dNovo.d).padStart(2,'0')}`});
+      // remove do dia original (onde quer que estivesse)
+      if(dOrig){const j=dOrig.mov.findIndex(m=>m.id===form.origId);
+        if(j>=0)dOrig.mov.splice(j,1);
+        if(antigo)dOrig[antigo.t]=dOrig.mov.filter(m=>m.t===antigo.t).reduce((a,b)=>a+b.v,0);}
+      // adiciona no dia de destino
+      dNovo.mov.push({id:form.origId,t:form.tipo,v:form.valor,desc:form.desc,tag:form.tag});
+      dNovo[form.tipo]=dNovo.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     }else{
-      const novo=await sbNovoLancamento({ano,mes,dia:d.d,tipo:form.tipo,
+      const nv=await sbNovoLancamento({ano,mes,dia:dNovo.d,tipo:form.tipo,
         valor:form.valor,nome:form.desc,tagId:form.tag});
-      d.mov.push({id:novo.id,t:form.tipo,v:form.valor,desc:form.desc,tag:form.tag});
+      dNovo.mov.push({id:nv.id,t:form.tipo,v:form.valor,desc:form.desc,tag:form.tag});
+      dNovo[form.tipo]=dNovo.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     }
-    d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     recalc(ano,mes);close_('fsNew');
-    toast(`${CAT[form.tipo].s} de ${rs(form.valor)} em ${d.d}/${mes}`);
+    toast(`${CAT[form.tipo].s} de ${rs(form.valor)} em ${dNovo.d}/${mes}`);
     render();sync('on');
     if(document.getElementById('fsDay').classList.contains('on')){dayIdx=form.idx;renderDay();}
   }catch(e){ sync('off'); toast('erro: '+e.message); }
@@ -1583,11 +1621,12 @@ function ligarEventos(){
 /* ═══ carga inicial ═══ */
 async function iniciar(){
   document.getElementById('login').hidden=true;
+  ano=HOJE.y;mes=HOJE.m;dayIdx=HOJE.d-1;   // define o mês atual ANTES de recalcular
   sync('busy');
   try{
     await sbCarregarAuxiliares();
     await sbCarregarJanela(HOJE.y,HOJE.m,1,8);
-    recalcTudo();ano=HOJE.y;mes=HOJE.m;dayIdx=HOJE.d-1;
+    recalcTudo();
     render();sync('on');
     let deb;
     sbEscutar(()=>{clearTimeout(deb);deb=setTimeout(async()=>{

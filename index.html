@@ -421,7 +421,7 @@ const SB = (typeof supabase !== 'undefined' && !SUPABASE_URL.startsWith('COLE'))
   : null;
 
 let D = { meses:{}, patrimonio:[] };
-let TAGS = [], PREV = [], PREVDIV = 30, CARTOES = [], REC = [], ASSIN = [], ACONF = {};
+let TAGS = [], PREV = [], PREVDIV = 30, CARTOES = [], REC = [], ASSIN = [], ACONF = {}, VENC = null;
 let USER = null;
 
 const _k = (y,m) => `${y}-${m}`;
@@ -485,7 +485,9 @@ function aplicarAssinaturas(ano, mes, dias){
   ASSIN.forEach(a=>{
     // confirmada neste mês? então não é mais sombra (já virou lançamento real)
     if(ACONF[`${a.id}:${ano}:${mes}`]) return;
-    const d=Math.min(a.dia||1, dias.length);
+    // todas as assinaturas caem no vencimento da fatura (se definido); senão, no dia da assinatura
+    const diaAlvo = VENC || a.dia || 1;
+    const d=Math.min(diaAlvo, dias.length);
     const dia=dias[d-1];
     dia.assinPrev=(dia.assinPrev||0)+a.valor;
     dia.mov.push({ id:'assin:'+a.id+':'+ano+'-'+mes, assin:a.id, t:a.tipo,
@@ -572,6 +574,7 @@ async function sbCarregarAuxiliares(){
   TAGS = (tags.data||[]).map(t => ({ id:t.id, nome:t.nome, cor:t.cor, areas:t.areas }));
   PREV = (prev.data||[]).map(p => ({ id:p.id, n:p.nome, v:Number(p.valor_mensal) }));
   PREVDIV = pref.data?.previsao_divisor ?? 30;
+  VENC = pref.data?.venc_fatura ?? null;
   CARTOES = (cart.data||[]).map(c => ({ id:c.id, nome:c.nome,
                 fecha:c.dia_fechamento, vence:c.dia_vencimento }));
   D.patrimonio = (contas.data||[]).map(c => {
@@ -669,6 +672,11 @@ async function sbSalvarPrevisao(item){          // {id?, n, v}
   return item;
 }
 async function sbApagarPrevisao(id){ await SB.from('previsao_itens').delete().eq('id',id); }
+async function sbSalvarVenc(dia){
+  await SB.from('preferencias')
+    .upsert({ user_id: await uidAtual(), venc_fatura:dia }, { onConflict:'user_id' });
+  VENC=dia;
+}
 async function sbSalvarDivisor(n){
   await SB.from('preferencias')
     .upsert({ user_id: await uidAtual(), previsao_divisor:n }, { onConflict:'user_id' });
@@ -934,7 +942,8 @@ function pickTipo(cb){
 }
 function novoLanc(tipo,ctx){
   form={tipo,valor:ctx?.v||0,desc:ctx?.desc||'',tag:ctx?.tag||null,
-        idx:ctx?.idx??0,edit:ctx?.edit,j:ctx?.j};
+        idx:ctx?.idx??0,edit:ctx?.edit,j:ctx?.j,
+        origId:ctx?.id||null, origIdx:ctx?.idx??0};
   formLanc();
 }
 function formLanc(){
@@ -1023,23 +1032,26 @@ function formLanc(){
     recalc(ano,mes);closeM();toast('lançamento excluído');grade();painel();};
 }
 async function salvarLanc(){
-  const d=M().dias[form.idx],antigo=form.edit?d.mov[form.j]:null;
+  const dNovo=M().dias[form.idx];
+  const dOrig=M().dias[form.origIdx];
+  const antigo=form.edit ? (dOrig?.mov.find(m=>m.id===form.origId)||null) : null;
   // zerar um lançamento existente = excluir do banco
   if(form.edit&&form.valor<=0){
     sync('busy');
-    try{ if(antigo?.id) await sbApagarLancamento(antigo.id); }
+    try{ if(form.origId) await sbApagarLancamento(form.origId); }
     catch(e){ sync('off'); toast('erro ao excluir: '+e.message); return; }
-    d.mov.splice(form.j,1);
-    d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
+    if(dOrig){const j=dOrig.mov.findIndex(m=>m.id===form.origId);
+      if(j>=0)dOrig.mov.splice(j,1);
+      dOrig[form.tipo]=dOrig.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);}
     recalc(ano,mes);closeM();toast('lançamento removido');grade();painel();return;}
   if(form.valor<=0){toast('informe um valor maior que zero');return;}
   sync('busy');
   // lançamento recorrente: cria REGRA, não linha única
   if(!form.edit && form.rep && form.rep!=='não repete'){
-    const inicio=`${ano}-${_pad(mes)}-${_pad(d.d)}`;
+    const inicio=`${ano}-${_pad(mes)}-${_pad(dNovo.d)}`;
     const fim=form.ate||'2027-12-31';
-    const diaRef=form.rep==='mensalmente'?d.d
-      :form.rep==='semanalmente'?new Date(ano,mes-1,d.d).getDay():null;
+    const diaRef=form.rep==='mensalmente'?dNovo.d
+      :form.rep==='semanalmente'?new Date(ano,mes-1,dNovo.d).getDay():null;
     try{
       const regra=await sbSalvarRecorrencia({tipo:form.tipo,valor:form.valor,
         nome:form.desc.trim(),tagId:form.tag,freq:form.rep,diaRef,inicio,fim});
@@ -1052,21 +1064,23 @@ async function salvarLanc(){
     return;
   }
   try{
-    if(form.edit&&antigo?.id){
-      await sbEditarLancamento(antigo.id,{tipo:form.tipo,valor:form.valor,
+    if(form.edit&&form.origId){
+      await sbEditarLancamento(form.origId,{tipo:form.tipo,valor:form.valor,
         nome:form.desc.trim()||null,tag_id:form.tag||null,
-        data:`${ano}-${String(mes).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`});
-      d.mov.splice(form.j,1);
-      d[antigo.t]=d.mov.filter(m=>m.t===antigo.t).reduce((a,b)=>a+b.v,0);
-      d.mov.push({id:antigo.id,t:form.tipo,v:form.valor,desc:form.desc.trim(),tag:form.tag||null});
+        data:`${ano}-${String(mes).padStart(2,'0')}-${String(dNovo.d).padStart(2,'0')}`});
+      if(dOrig){const j=dOrig.mov.findIndex(m=>m.id===form.origId);
+        if(j>=0)dOrig.mov.splice(j,1);
+        if(antigo)dOrig[antigo.t]=dOrig.mov.filter(m=>m.t===antigo.t).reduce((a,b)=>a+b.v,0);}
+      dNovo.mov.push({id:form.origId,t:form.tipo,v:form.valor,desc:form.desc.trim(),tag:form.tag||null});
+      dNovo[form.tipo]=dNovo.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     }else{
-      const nv=await sbNovoLancamento({ano,mes,dia:d.d,tipo:form.tipo,
+      const nv=await sbNovoLancamento({ano,mes,dia:dNovo.d,tipo:form.tipo,
         valor:form.valor,nome:form.desc.trim(),tagId:form.tag});
-      d.mov.push({id:nv.id,t:form.tipo,v:form.valor,desc:form.desc.trim(),tag:form.tag||null});
+      dNovo.mov.push({id:nv.id,t:form.tipo,v:form.valor,desc:form.desc.trim(),tag:form.tag||null});
+      dNovo[form.tipo]=dNovo.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     }
-    d[form.tipo]=d.mov.filter(m=>m.t===form.tipo).reduce((a,b)=>a+b.v,0);
     recalc(ano,mes);closeM();
-    toast(`${form.desc.trim()||CAT[form.tipo].s}: ${rs(form.valor)} em ${d.d}/${mes}`);
+    toast(`${form.desc.trim()||CAT[form.tipo].s}: ${rs(form.valor)} em ${dNovo.d}/${mes}`);
     grade();painel();sync('on');
   }catch(e){ sync('off'); toast('erro ao salvar: '+e.message); }
 }
@@ -1156,9 +1170,27 @@ function asBox(){
         ${caiu?'background:var(--bg2);color:var(--sub)':'background:var(--verde);color:var(--verde-t)'}">
         ${caiu?'✓ caiu':'confirmar'}</button></div>`;}).join('')+
     `<div class="mrow" style="font-weight:700"><span class="l">total previsto</span>
-      <span class="num">${rs(ASSIN.filter(a=>!conf(a)).reduce((s,a)=>s+a.valor,0))}</span></div>`;
+      <span class="num">${rs(ASSIN.filter(a=>!conf(a)).reduce((s,a)=>s+a.valor,0))}</span></div>`+
+    `<button class="mrow" id="asVencW" style="width:100%;background:none;border:none;
+      border-top:1px solid var(--line);color:var(--fg);font:inherit;cursor:pointer;
+      display:flex;justify-content:space-between"><span class="l" style="color:var(--sub);font-weight:400">
+      caem no dia da fatura</span><span class="num" style="color:var(--laranja)">${VENC?('dia '+VENC):'definir'}</span></button>`;
   box.querySelectorAll('[data-conf]').forEach(b=>b.onclick=()=>confirmarAssinWeb(+b.dataset.conf));
   box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>addAssinWeb(+b.dataset.edit));
+  const vb=document.getElementById('asVencW');
+  if(vb)vb.onclick=()=>{
+    let opts='';for(let d=1;d<=31;d++)
+      opts+=`<button class="opt" data-d="${d}" style="padding-left:17px"><b>dia ${d}</b></button>`;
+    modal(`<div class="mdlh"><h2>vencimento da fatura</h2><button onclick="closeM()">✕</button></div>
+      <div style="padding:6px 17px 2px;color:var(--sub);font-size:13px">
+        todas as assinaturas previstas caem neste dia.</div>`+opts);
+    document.querySelectorAll('#mdl .opt').forEach(b=>b.onclick=async()=>{
+      const dia=+b.dataset.d;
+      try{ await sbSalvarVenc(dia); }catch(e){ toast('erro: '+e.message); return; }
+      const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
+      await sbCarregarJanela(ano,mes,1,8);recalcTudo();
+      closeM();grade();painel();toast('vencimento no dia '+dia);});
+  };
 }
 async function confirmarAssinWeb(i){
   const a=ASSIN[i], caiu=!!ACONF[`${a.id}:${ano}:${mes}`];
@@ -1491,6 +1523,7 @@ function ligarEventos(){
 /* ═══ carga inicial ═══ */
 async function iniciar(){
   document.getElementById('login').hidden=true;
+  ano=HOJE.y; mes=HOJE.m;          // abre sempre no mês atual do dispositivo
   sync('busy');
   try{
     await sbCarregarAuxiliares();

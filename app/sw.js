@@ -1,7 +1,7 @@
 /* Service worker — casca offline.
    Estratégia: cache-first para os arquivos do app,
    network-only para o Supabase (dados precisam ser frescos). */
-const CACHE = 'financeira-v8';
+const CACHE = 'financeira-v9';
 const CASCA = [
   '/app/',
   '/app/index.html',
