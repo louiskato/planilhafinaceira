@@ -482,11 +482,14 @@ function aplicarRecorrencias(ano, mes, dias){
 /* assinaturas previstas: aparecem como SOMBRA nos dias, exceto onde já confirmadas.
    marcadas com assin:id — não são lançamentos, são projeção (como a previsão de diário) */
 function aplicarAssinaturas(ano, mes, dias){
+  // previsão só vale para o mês atual e futuros — meses passados já têm os valores reais
+  if(ano*12+mes < HOJE.y*12+HOJE.m) return;
   ASSIN.forEach(a=>{
     // confirmada neste mês? então não é mais sombra (já virou lançamento real)
     if(ACONF[`${a.id}:${ano}:${mes}`]) return;
-    // todas as assinaturas caem no vencimento da fatura (se definido); senão, no dia da assinatura
-    const diaAlvo = VENC || a.dia || 1;
+    // cai no vencimento do cartão vinculado; sem cartão, no dia próprio da assinatura
+    const cartao = a.cartaoId ? CARTOES.find(c=>c.id===a.cartaoId) : null;
+    const diaAlvo = (cartao && cartao.vence) || a.dia || 1;
     const d=Math.min(diaAlvo, dias.length);
     const dia=dias[d-1];
     dia.assinPrev=(dia.assinPrev||0)+a.valor;
@@ -519,6 +522,7 @@ async function sbCarregarMes(ano, mes){
   });
 
   aplicarRecorrencias(ano, mes, dias);
+  aplicarAssinaturas(ano, mes, dias);
 
   D.meses[_k(ano,mes)] = {
     dias,
@@ -568,7 +572,7 @@ async function sbCarregarAuxiliares(){
     nome:r.nome||'', tagId:r.tag_id||null, freq:r.frequencia, diaRef:r.dia_ref,
     inicio:r.data_inicio, fim:r.data_fim }));
   ASSIN = (assin.data||[]).map(a => ({ id:a.id, nome:a.nome, valor:Number(a.valor),
-    dia:a.dia, tipo:a.tipo }));
+    dia:a.dia, tipo:a.tipo, cartaoId:a.cartao_id||null }));
   ACONF = {};
   (aconf.data||[]).forEach(c => { ACONF[`${c.assinatura_id}:${c.ano}:${c.mes}`] = c.lancamento_id||true; });
   TAGS = (tags.data||[]).map(t => ({ id:t.id, nome:t.nome, cor:t.cor, areas:t.areas }));
@@ -602,7 +606,8 @@ async function sbApagarRecorrencia(id){
 
 /* ── ASSINATURAS PREVISTAS ──────────────────────────────────── */
 async function sbSalvarAssinatura(a){   // {id?, nome, valor, dia, tipo}
-  const linha={ nome:a.nome, valor:a.valor, dia:a.dia||1, tipo:a.tipo||'saida' };
+  const linha={ nome:a.nome, valor:a.valor, dia:a.dia||1, tipo:a.tipo||'saida',
+    cartao_id:a.cartaoId||null };
   if(a.id){
     await SB.from('assinaturas').update(linha).eq('id',a.id);
   }else{
@@ -1171,26 +1176,52 @@ function asBox(){
         ${caiu?'✓ caiu':'confirmar'}</button></div>`;}).join('')+
     `<div class="mrow" style="font-weight:700"><span class="l">total previsto</span>
       <span class="num">${rs(ASSIN.filter(a=>!conf(a)).reduce((s,a)=>s+a.valor,0))}</span></div>`+
-    `<button class="mrow" id="asVencW" style="width:100%;background:none;border:none;
+    `<button class="mrow" id="asCardsW" style="width:100%;background:none;border:none;
       border-top:1px solid var(--line);color:var(--fg);font:inherit;cursor:pointer;
       display:flex;justify-content:space-between"><span class="l" style="color:var(--sub);font-weight:400">
-      caem no dia da fatura</span><span class="num" style="color:var(--laranja)">${VENC?('dia '+VENC):'definir'}</span></button>`;
+      gerenciar cartões</span><span class="num" style="color:var(--laranja)">${CARTOES.length} ›</span></button>`;
   box.querySelectorAll('[data-conf]').forEach(b=>b.onclick=()=>confirmarAssinWeb(+b.dataset.conf));
   box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>addAssinWeb(+b.dataset.edit));
-  const vb=document.getElementById('asVencW');
-  if(vb)vb.onclick=()=>{
-    let opts='';for(let d=1;d<=31;d++)
-      opts+=`<button class="opt" data-d="${d}" style="padding-left:17px"><b>dia ${d}</b></button>`;
-    modal(`<div class="mdlh"><h2>vencimento da fatura</h2><button onclick="closeM()">✕</button></div>
-      <div style="padding:6px 17px 2px;color:var(--sub);font-size:13px">
-        todas as assinaturas previstas caem neste dia.</div>`+opts);
-    document.querySelectorAll('#mdl .opt').forEach(b=>b.onclick=async()=>{
-      const dia=+b.dataset.d;
-      try{ await sbSalvarVenc(dia); }catch(e){ toast('erro: '+e.message); return; }
+  const cb=document.getElementById('asCardsW');
+  if(cb)cb.onclick=()=>gerenciarCartoesWeb();
+}
+function gerenciarCartoesWeb(){
+  const lista=CARTOES.map((c,i)=>`<button class="opt" data-edit="${i}" style="padding-left:17px">
+    <b>${c.nome}</b><span style="color:var(--sub);font-size:12px;margin-left:6px">vence dia ${c.vence||'?'}</span></button>`).join('');
+  modal(`<div class="mdlh"><h2>cartões</h2><button onclick="closeM()">✕</button></div>`+
+    (lista||'<div style="padding:13px 17px;color:var(--sub);font-size:13px">nenhum cartão ainda.</div>')+
+    `<button class="cta" id="cardNovoW" style="background:#4F6E9E">+ novo cartão</button>`);
+  document.getElementById('cardNovoW').onclick=()=>formCartaoWeb();
+  document.querySelectorAll('#mdl [data-edit]').forEach(b=>b.onclick=()=>formCartaoWeb(+b.dataset.edit));
+}
+function formCartaoWeb(i){
+  const ed=i!==undefined, c=ed?CARTOES[i]:{nome:'',vence:10};
+  modal(`<div class="mdlh"><h2>${ed?'editar':'novo'} cartão</h2><button onclick="closeM()">✕</button></div>
+    <div class="lrow"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      <input id="ccN" value="${c.nome}" placeholder="nome (ex: Nubank)"></div>
+    <div class="lrow"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      vence no dia <input id="ccV" type="number" min="1" max="31" value="${c.vence||10}"
+        style="width:56px;margin-left:auto;text-align:center"></div>
+    <button class="cta" id="ccOk" style="background:#4F6E9E">${ed?'salvar':'adicionar'} cartão</button>
+    ${ed?'<button class="del" id="ccDel">excluir cartão</button>':''}`);
+  setTimeout(()=>document.getElementById('ccN').focus(),60);
+  document.getElementById('ccOk').onclick=async()=>{
+    const nome=document.getElementById('ccN').value.trim();
+    const vence=Math.min(31,Math.max(1,+document.getElementById('ccV').value||10));
+    if(!nome){toast('nome do cartão');return;}
+    try{
+      const salvo=await sbSalvarCartao({id:ed?c.id:undefined,nome,vence,fecha:null});
+      if(ed)Object.assign(CARTOES[i],{nome,vence});
+      else CARTOES.push({id:salvo.id,nome,vence});
       const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
       await sbCarregarJanela(ano,mes,1,8);recalcTudo();
-      closeM();grade();painel();toast('vencimento no dia '+dia);});
+      grade();painel();toast('cartão salvo');gerenciarCartoesWeb();
+    }catch(e){toast('erro: '+e.message);}
   };
+  if(ed)document.getElementById('ccDel').onclick=async()=>{
+    try{ await sbApagarCartao(c.id); }catch(e){toast('erro: '+e.message);return;}
+    CARTOES=CARTOES.filter(x=>x.id!==c.id);
+    toast('cartão excluído');gerenciarCartoesWeb();};
 }
 async function confirmarAssinWeb(i){
   const a=ASSIN[i], caiu=!!ACONF[`${a.id}:${ano}:${mes}`];
@@ -1209,21 +1240,31 @@ function addAssinWeb(i){
      <button onclick="closeM()" style="background:none;border:none;font-size:19px;color:var(--sub)">✕</button></div>
    <div class="lrow"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg>
      <input id="asN" value="${a.nome}" placeholder="nome (ex: Spotify)"></div>
-   <div class="lrow"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>
+   <div class="lrow"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+     cartão <select id="asCard" style="margin-left:auto;background:var(--bg);color:var(--fg);
+       border:1px solid var(--line);border-radius:7px;padding:5px 8px;font:inherit">
+       ${CARTOES.map(c=>`<option value="${c.id}" ${a.cartaoId===c.id?'selected':''}>${c.nome} (dia ${c.vence})</option>`).join('')}
+       <option value="" ${!a.cartaoId?'selected':''}>nenhum — dia fixo</option></select></div>
+   <div class="lrow" id="asDiaRow" style="${a.cartaoId?'display:none':''}">
+     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>
      cai no dia <input id="asD" type="number" min="1" max="31" value="${a.dia}"
        style="width:56px;margin-left:auto;text-align:center"></div>
    <button class="cta" id="asOk" style="background:#C1441A">${ed?'salvar':'adicionar'} assinatura</button>
    ${ed?'<button class="del" id="asDel">excluir</button>':''}`);
   setTimeout(()=>document.getElementById('asV').focus(),60);
+  const cardSel=document.getElementById('asCard');
+  cardSel.onchange=()=>{document.getElementById('asDiaRow').style.display=cardSel.value?'none':'';};
   document.getElementById('asOk').onclick=async()=>{
     const nome=document.getElementById('asN').value.trim();
     const valor=parse(document.getElementById('asV').value);
-    const dia=Math.min(31,Math.max(1,+document.getElementById('asD').value||1));
+    const cartaoId=cardSel.value||null;
+    const cartao=cartaoId?CARTOES.find(c=>c.id===cartaoId):null;
+    const dia=cartao?(cartao.vence||1):Math.min(31,Math.max(1,+document.getElementById('asD').value||1));
     if(!nome||valor<=0){toast('nome e valor');return;}
     try{
-      const salva=await sbSalvarAssinatura({id:ed?a.id:undefined,nome,valor,dia,tipo:'saida'});
-      if(ed){Object.assign(ASSIN[i],{nome,valor,dia});}
-      else{ASSIN.push({id:salva.id,nome,valor,dia,tipo:'saida',tagId:null});}
+      const salva=await sbSalvarAssinatura({id:ed?a.id:undefined,nome,valor,dia,tipo:'saida',cartaoId});
+      if(ed){Object.assign(ASSIN[i],{nome,valor,dia,cartaoId});}
+      else{ASSIN.push({id:salva.id,nome,valor,dia,tipo:'saida',tagId:null,cartaoId});}
       delete D.meses[key(ano,mes)];await sbCarregarMes(ano,mes);recalcTudo();
       closeM();grade();painel();toast(ed?'assinatura salva':'assinatura criada');
     }catch(e){toast('erro: '+e.message);}

@@ -472,11 +472,11 @@ section[id^=s-]{animation:fade .22s var(--e)}
     quando um cai de verdade, confirme — vira lançamento real só naquele mês.</div>
   <div id="asList" style="flex:1"></div>
   <div class="pvfoot">
-    <button class="pvline" id="asVenc" style="width:100%;background:none;border:none;
+    <button class="pvline" id="asCards" style="width:100%;background:none;border:none;
       border-bottom:1px solid var(--line);color:var(--fg);font:inherit;cursor:pointer;
       display:flex;justify-content:space-between;align-items:center">
-      <span>caem no dia da fatura</span>
-      <span class="num" id="asVencN" style="color:var(--btn)">—</span></button>
+      <span>gerenciar cartões</span>
+      <span class="num" style="color:var(--btn)">${CARTOES.length} ›</span></button>
     <div class="pvline"><span>total previsto por mês</span><span class="num" id="asTot">R$ 0,00</span></div>
   </div>
 </div>
@@ -597,11 +597,14 @@ function aplicarRecorrencias(ano, mes, dias){
 /* assinaturas previstas: aparecem como SOMBRA nos dias, exceto onde já confirmadas.
    marcadas com assin:id — não são lançamentos, são projeção (como a previsão de diário) */
 function aplicarAssinaturas(ano, mes, dias){
+  // previsão só vale para o mês atual e futuros — meses passados já têm os valores reais
+  if(ano*12+mes < HOJE.y*12+HOJE.m) return;
   ASSIN.forEach(a=>{
     // confirmada neste mês? então não é mais sombra (já virou lançamento real)
     if(ACONF[`${a.id}:${ano}:${mes}`]) return;
-    // todas as assinaturas caem no vencimento da fatura (se definido); senão, no dia da assinatura
-    const diaAlvo = VENC || a.dia || 1;
+    // cai no vencimento do cartão vinculado; sem cartão, no dia próprio da assinatura
+    const cartao = a.cartaoId ? CARTOES.find(c=>c.id===a.cartaoId) : null;
+    const diaAlvo = (cartao && cartao.vence) || a.dia || 1;
     const d=Math.min(diaAlvo, dias.length);
     const dia=dias[d-1];
     dia.assinPrev=(dia.assinPrev||0)+a.valor;
@@ -686,7 +689,7 @@ async function sbCarregarAuxiliares(){
     nome:r.nome||'', tagId:r.tag_id||null, freq:r.frequencia, diaRef:r.dia_ref,
     inicio:r.data_inicio, fim:r.data_fim }));
   ASSIN = (assin.data||[]).map(a => ({ id:a.id, nome:a.nome, valor:Number(a.valor),
-    dia:a.dia, tipo:a.tipo }));
+    dia:a.dia, tipo:a.tipo, cartaoId:a.cartao_id||null }));
   ACONF = {};
   (aconf.data||[]).forEach(c => { ACONF[`${c.assinatura_id}:${c.ano}:${c.mes}`] = c.lancamento_id||true; });
   TAGS = (tags.data||[]).map(t => ({ id:t.id, nome:t.nome, cor:t.cor, areas:t.areas }));
@@ -721,8 +724,9 @@ async function sbApagarRecorrencia(id){
 }
 
 /* ── ASSINATURAS PREVISTAS ──────────────────────────────────── */
-async function sbSalvarAssinatura(a){   // {id?, nome, valor, dia, tipo}
-  const linha={ nome:a.nome, valor:a.valor, dia:a.dia||1, tipo:a.tipo||'saida' };
+async function sbSalvarAssinatura(a){   // {id?, nome, valor, dia, tipo, cartaoId}
+  const linha={ nome:a.nome, valor:a.valor, dia:a.dia||1, tipo:a.tipo||'saida',
+    cartao_id:a.cartaoId||null };
   if(a.id){
     await SB.from('assinaturas').update(linha).eq('id',a.id);
   }else{
@@ -1263,22 +1267,8 @@ function renderAssin(){
   }
   const t=ASSIN.reduce((a,b)=>a+b.valor,0);
   document.getElementById('asTot').textContent=rs(t);
-  const vn=document.getElementById('asVencN');
-  if(vn)vn.textContent=VENC?('dia '+VENC):'definir';
-  const vb=document.getElementById('asVenc');
-  if(vb)vb.onclick=()=>{
-    let opts='';for(let d=1;d<=31;d++)
-      opts+=`<button class="opt" data-d="${d}" style="padding-left:16px"><b>dia ${d}</b></button>`;
-    sheet(`<div class="shh"><h2>vencimento da fatura</h2><button class="x" onclick="closeSheet()">✕</button></div>
-      <div style="padding:8px 16px 4px;color:var(--sub);font-size:13px">
-        todas as assinaturas previstas caem neste dia.</div>`+opts);
-    document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=async()=>{
-      const dia=+b.dataset.d;closeSheet();
-      try{ await sbSalvarVenc(dia); }catch(e){ toast('erro: '+e.message); return; }
-      const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
-      await sbCarregarJanela(ano,mes,1,8);recalcTudo();
-      renderAssin();render();toast('vencimento no dia '+dia);});
-  };
+  const cb=document.getElementById('asCards');
+  if(cb)cb.onclick=()=>gerenciarCartoes(()=>renderAssin());
   const sub=document.getElementById('assinSub');
   if(sub)sub.textContent=ASSIN.length?rs(t)+'/mês':'—';
 }
@@ -1296,6 +1286,64 @@ async function toggleConfirma(i){
   }catch(e){ sync('off'); toast('erro: '+e.message); }
 }
 
+function gerenciarCartoes(aoFechar){
+  const lista=CARTOES.map((c,i)=>`<button class="linerow" data-edit="${i}"
+    style="width:100%;background:none;border:none;border-bottom:1px solid var(--line);
+    text-align:left;color:var(--fg);cursor:pointer;display:flex">
+    <b>${c.nome}</b><span style="margin-left:auto;color:var(--sub)">vence dia ${c.vence||'?'}</span></button>`).join('');
+  sheet(`<div class="shh"><h2>cartões</h2><button class="x" onclick="closeSheet()">✕</button></div>`+
+    (lista||'<div style="padding:14px 16px;color:var(--sub);font-size:13.5px">nenhum cartão ainda.</div>')+
+    `<button class="ctaslim" id="cardNovo">+ novo cartão</button>
+     ${aoFechar?'<button class="del" id="cardPronto" style="color:var(--fg)">pronto</button>':''}`);
+  document.getElementById('cardNovo').onclick=()=>formCartao(undefined,aoFechar);
+  document.querySelectorAll('#sh [data-edit]').forEach(b=>b.onclick=()=>formCartao(+b.dataset.edit,aoFechar));
+  const pr=document.getElementById('cardPronto');
+  if(pr)pr.onclick=()=>{closeSheet();if(aoFechar)aoFechar();};
+}
+function formCartao(i,aoFechar){
+  const ed=i!==undefined, c=ed?CARTOES[i]:{nome:'',vence:10};
+  sheet(`<div class="shh"><h2>${ed?'editar':'novo'} cartão</h2>
+      <button class="x" onclick="closeSheet()">✕</button></div>
+    <div class="linerow"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      <input id="ccN" value="${c.nome}" placeholder="nome (ex: Nubank)"></div>
+    <button class="linerow" id="ccVenc" style="width:100%;background:none;border:none;
+      border-top:1px solid var(--line);text-align:left;color:var(--fg);cursor:pointer">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      vence no dia <span style="margin-left:auto;color:var(--sub)" id="ccVencN">${c.vence||10}</span></button>
+    <button class="ctaslim" id="ccOk">${ed?'salvar':'adicionar'} cartão</button>
+    ${ed?'<button class="del" id="ccDel">excluir cartão</button>':''}`);
+  setTimeout(()=>document.getElementById('ccN').focus(),80);
+  let vence=c.vence||10;
+  document.getElementById('ccVenc').onclick=()=>{
+    const nAtual=document.getElementById('ccN').value;
+    let opts='';for(let d=1;d<=31;d++)opts+=`<button class="opt" data-d="${d}" style="padding-left:15px"><b>dia ${d}</b></button>`;
+    sheet(`<div class="shh"><h2>vencimento</h2><button class="x" onclick="closeSheet()">✕</button></div>`+opts);
+    document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{
+      const nc={...(ed?CARTOES[i]:{}),nome:nAtual,vence:+b.dataset.d};
+      if(ed)CARTOES[i]=nc;else{CARTOES.push(nc);i=CARTOES.length-1;}
+      formCartao(i,aoFechar);});};
+  document.getElementById('ccOk').onclick=async()=>{
+    const nome=document.getElementById('ccN').value.trim();
+    const v=+document.getElementById('ccVencN').textContent||vence;
+    if(!nome){toast('nome do cartão');return;}
+    sync('busy');
+    try{
+      const salvo=await sbSalvarCartao({id:ed?c.id:undefined,nome,vence:v,fecha:null});
+      if(ed)Object.assign(CARTOES[i],{nome,vence:v});
+      else if(!CARTOES.find(x=>x.id===salvo.id))CARTOES.push({id:salvo.id,nome,vence:v});
+      else CARTOES[CARTOES.length-1].id=salvo.id;
+      const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
+      await sbCarregarJanela(ano,mes,1,8);recalcTudo();
+      closeSheet();toast('cartão salvo');sync('on');
+      gerenciarCartoes(aoFechar);
+    }catch(e){ sync('off'); toast('erro: '+e.message); }};
+  if(ed)document.getElementById('ccDel').onclick=async()=>{
+    sync('busy');
+    try{ await sbApagarCartao(c.id); }catch(e){ sync('off'); toast('erro: '+e.message); return; }
+    CARTOES=CARTOES.filter(x=>x.id!==c.id);
+    closeSheet();toast('cartão excluído');sync('on');gerenciarCartoes(aoFechar);};
+}
+
 let _novaAssinTmp=null;
 function addAssin(i){
   const ed=i!==undefined;
@@ -1307,32 +1355,41 @@ function addAssin(i){
        color:var(--sub);cursor:pointer;line-height:1">✕</button></div>
    <div class="linerow"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg>
      <input id="asN" value="${a.nome}" placeholder="nome (ex: Spotify)"></div>
-   <button class="linerow" id="asDia" style="width:100%;background:none;border:none;
+   <button class="linerow" id="asCard" style="width:100%;background:none;border:none;
      border-top:1px solid var(--line);text-align:left;color:var(--fg);cursor:pointer">
-     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-     cai no dia <span style="margin-left:auto;color:var(--sub)" id="asDiaN">${a.dia}</span></button>
+     <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+     cartão <span style="margin-left:auto;color:var(--sub)" id="asCardN">${
+       a.cartaoId?(CARTOES.find(c=>c.id===a.cartaoId)?.nome||'—'):'nenhum (dia '+a.dia+')'}</span></button>
    <button class="ctaslim" id="asOk">${ed?'salvar':'adicionar'} assinatura</button>
    ${ed?'<button class="del" id="asDel">excluir</button>':'<div style="height:6px"></div>'}`);
   setTimeout(()=>document.getElementById('asV').focus(),80);
-  let dia=a.dia;
-  document.getElementById('asDia').onclick=()=>{
+  let cartaoId=a.cartaoId||null;
+  document.getElementById('asCard').onclick=()=>{
     const nomeAtual=document.getElementById('asN').value;
     const valAtual=document.getElementById('asV').value;
-    let opts='';for(let d=1;d<=31;d++)opts+=`<button class="opt" data-d="${d}" style="padding-left:15px"><b>dia ${d}</b></button>`;
-    sheet(`<div class="shh"><h2>dia da fatura</h2><button class="x" onclick="closeSheet()">✕</button></div>`+opts);
+    let opts=CARTOES.map(c=>`<button class="opt" data-c="${c.id}" style="padding-left:15px">
+      <b>${c.nome}</b><span style="color:var(--sub);font-size:12px;margin-left:6px">vence dia ${c.vence||'?'}</span></button>`).join('');
+    opts+=`<button class="opt" data-c="" style="padding-left:15px"><b>nenhum</b>
+      <span style="color:var(--sub);font-size:12px;margin-left:6px">escolher um dia fixo</span></button>`;
+    opts+=`<button class="opt" data-novo="1" style="padding-left:15px;color:var(--btn)"><b>+ novo cartão</b></button>`;
+    sheet(`<div class="shh"><h2>cartão</h2><button class="x" onclick="closeSheet()">✕</button></div>`+opts);
     document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{
-      const escolhido={...(ed?ASSIN[i]:{}),nome:nomeAtual,valor:parse(valAtual),dia:+b.dataset.d,tipo:'saida'};
+      const base={...(ed?ASSIN[i]:{}),nome:nomeAtual,valor:parse(valAtual),tipo:'saida'};
+      if(b.dataset.novo){ closeSheet();_novaAssinTmp=base;gerenciarCartoes(()=>addAssin(ed?i:undefined)); return; }
+      const cid=b.dataset.c||null;
+      const escolhido={...base,cartaoId:cid,dia:cid?(CARTOES.find(c=>c.id===cid)?.vence||1):(a.dia||10)};
       if(ed){ASSIN[i]=escolhido;addAssin(i);}else{closeSheet();_novaAssinTmp=escolhido;addAssin();}
     });
   };
   document.getElementById('asOk').onclick=async()=>{
     const n=document.getElementById('asN').value.trim(),v=parse(document.getElementById('asV').value);
-    const dd=+document.getElementById('asDiaN').textContent||dia;
+    const cartao=cartaoId?CARTOES.find(c=>c.id===cartaoId):null;
+    const dd=cartao?(cartao.vence||1):(a.dia||10);
     if(!n||v<=0){toast('preencha nome e valor');return;}
     sync('busy');
     try{
-      if(ed){const it={...ASSIN[i],nome:n,valor:v,dia:dd};await sbSalvarAssinatura(it);ASSIN[i]=it;}
-      else{const it=await sbSalvarAssinatura({nome:n,valor:v,dia:dd,tipo:'saida'});ASSIN.push(it);}
+      if(ed){const it={...ASSIN[i],nome:n,valor:v,dia:dd,cartaoId};await sbSalvarAssinatura(it);ASSIN[i]=it;}
+      else{const it=await sbSalvarAssinatura({nome:n,valor:v,dia:dd,tipo:'saida',cartaoId});ASSIN.push(it);}
       // recarregar meses para refletir a sombra
       const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
       await sbCarregarJanela(ano,mes,1,8);recalcTudo();
