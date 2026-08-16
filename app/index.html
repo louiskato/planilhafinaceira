@@ -87,10 +87,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .grp .d{align-items:flex-start;padding-top:12px}
 .row.wk .d,.grp.wk .d{color:var(--fg);opacity:.55}
 .row.hj .d,.grp.hj .d{background:var(--btn);color:var(--btnfg);font-weight:700}
-.row .val{display:flex;align-items:center;gap:7px;padding:0 10px;justify-content:flex-end;
+.row .val{display:flex;align-items:center;gap:7px;padding:0 10px;justify-content:space-between;
   font-size:15px;font-weight:500}
+.row .val .num,.row .val .z{margin-left:auto}
 .row .val .z{color:var(--sub);opacity:.4}
-.grp .stack>div{display:flex;align-items:center;gap:6px;padding:0 10px;height:30px;
+.grp .stack>div{display:flex;align-items:center;gap:6px;padding:0 10px;height:30px;justify-content:space-between;
   border-bottom:1px solid var(--line);justify-content:flex-end;font-size:14px}
 .grp .stack>div:last-child{border-bottom:none}
 /* saldo: faixa de cor cheia, ocupando a coluna inteira */
@@ -348,6 +349,33 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 section[id^=s-]{animation:fade .22s var(--e)}
 @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* calendário de seleção de dia */
+.calwrap{padding:8px 14px 14px}
+.calnav{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 12px}
+.calnav b{font-size:16px;font-weight:600}
+.calnav button{background:none;border:none;color:var(--fg);font-size:20px;cursor:pointer;
+  padding:4px 12px;border-radius:8px;line-height:1}
+.calnav button:active{background:var(--wk)}
+.caldow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+.caldow span{text-align:center;font-size:11px;color:var(--sub);padding:4px 0;font-weight:500}
+.calgd{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.calgd button{aspect-ratio:1;background:none;border:1.5px solid transparent;border-radius:10px;
+  color:var(--fg);font-family:inherit;font-size:15px;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;transition:background .12s,border-color .12s}
+.calgd button:active{background:var(--wk)}
+.calgd button.hoje{border-color:var(--btn)}
+.calgd button.sel{background:var(--btn);color:var(--btnfg);font-weight:700}
+.calgd button.vazio{visibility:hidden;cursor:default}
+
+/* grade de meses (seletor "repetir até") */
+.mesgd{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:4px 14px 14px}
+.mesgd button{padding:14px 0;background:none;border:1.5px solid transparent;border-radius:10px;
+  color:var(--fg);font-family:inherit;font-size:14px;cursor:pointer;text-transform:capitalize;
+  transition:background .12s,border-color .12s}
+.mesgd button:active{background:var(--wk)}
+.mesgd button.sel{background:var(--btn);color:var(--btnfg);font-weight:700}
+.mesgd button:disabled{color:var(--sub);opacity:.3;cursor:default}
 </style>
 </head>
 <body>
@@ -1466,11 +1494,14 @@ function formNovo(){
   document.getElementById('cancelNovo').onclick=()=>close_('fsNew');
   document.getElementById('fTipo').onclick=()=>{sync();pickTipo(c=>{form.tipo=c;formNovo();});};
   document.getElementById('fData').onclick=()=>{sync();
-    sheet(`<div class="shh"><h2>data</h2><button class="x" onclick="closeSheet()">✕</button></div>`+
-      M().dias.map((dd,j)=>`<button class="opt" data-j="${j}" style="padding-left:15px">
-        <b>${String(dd.d).padStart(2,'0')}/${String(mes).padStart(2,'0')}/${ano}</b></button>`).join(''));
-    document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{
-      form.idx=+b.dataset.j;closeSheet();formNovo();});};
+    abreCalendario({ano,mes,diaSel:M().dias[form.idx].d,titulo:'data do lançamento',
+      onPick:async({ano:ny,mes:nm,dia:nd})=>{
+        if(ny===ano&&nm===mes){ form.idx=nd-1; fechaSheetSilencioso(); formNovo(); return; }
+        // data em outro mês: carrega o mês e move o formulário para lá
+        fechaSheetSilencioso();
+        if(!D.meses[key(ny,nm)]){ sync('busy'); await sbCarregarJanela(ny,nm,1,8); recalcTudo(); sync('on'); }
+        ano=ny; mes=nm; form.idx=nd-1; render(); formNovo();
+      }});};
   document.getElementById('fRep').onclick=()=>{sync();
     const R=[['não repete',''],['mensalmente','repete o mesmo valor mensalmente'],
              ['semanalmente','repete o mesmo valor semanalmente'],
@@ -1491,16 +1522,8 @@ function formNovo(){
       form.tag=b.dataset.n||null;closeSheet();formNovo();});};
   const _fAte=document.getElementById('fAte');
   if(_fAte)_fAte.onclick=()=>{sync();
-    // opções: próximos 24 meses
-    let opts='';const hoje=new Date();
-    for(let i=1;i<=24;i++){const dt=new Date(ano,mes-1+i,0);
-      const y=dt.getFullYear(),m=dt.getMonth()+1;
-      const val=`${y}-${_pad(m)}-${_pad(_ultimoDia(y,m))}`;
-      opts+=`<button class="opt" data-v="${val}" style="padding-left:15px">
-        <b>${AB[m-1]}/${y}</b></button>`;}
-    sheet(`<div class="shh"><h2>repetir até</h2><button class="x" onclick="closeSheet()">✕</button></div>`+opts);
-    document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{
-      form.ate=b.dataset.v;closeSheet();formNovo();});};
+    abreSelecMes({ano,mes,selVal:form.ate,minIdx:ano*12+mes+1,titulo:'repetir até',
+      onPick:(val)=>{ form.ate=val; fechaSheetSilencioso(); formNovo(); }});};
   document.getElementById('ctaBtn').onclick=()=>{sync();salvar();};
   if(form.edit)document.getElementById('delMov').onclick=async()=>{
     const d=M().dias[form.idx],mv=d.mov[form.j];
@@ -1578,6 +1601,61 @@ async function salvar(){
     if(document.getElementById('fsDay').classList.contains('on')){dayIdx=form.idx;renderDay();}
   }catch(e){ sync('off'); toast('erro: '+e.message); }
 }
+function abreSelecMes({ano:ay, mes:am, selVal, minIdx, titulo, onPick}){
+  let vy=ay;
+  function desenha(){
+    let cel='';
+    for(let m=1;m<=12;m++){
+      const idx=vy*12+m;
+      const val=`${vy}-${_pad(m)}-${_pad(_ultimoDia(vy,m))}`;
+      const dis=minIdx!==undefined && idx<minIdx;
+      const sel=selVal===val;
+      cel+=`<button data-v="${val}" ${dis?'disabled':''} class="${sel?'sel':''}">${AB[m-1]}</button>`;
+    }
+    sheet(`<div class="shh"><h2>${titulo||'mês'}</h2>
+        <button class="x" onclick="closeSheet()">✕</button></div>
+      <div class="calnav" style="padding:8px 16px 6px">
+        <button data-nav="-1">‹</button><b>${vy}</b><button data-nav="1">›</button></div>
+      <div class="mesgd">${cel}</div>`);
+    document.querySelector('[data-nav="-1"]').onclick=()=>{vy--;desenha();};
+    document.querySelector('[data-nav="1"]').onclick=()=>{vy++;desenha();};
+    document.querySelectorAll('.mesgd button[data-v]').forEach(b=>{
+      if(!b.disabled)b.onclick=()=>onPick(b.dataset.v);});
+  }
+  desenha();
+}
+
+function abreCalendario({ano:ay, mes:am, diaSel, titulo, onPick}){
+  const DOW=['dom','seg','ter','qua','qui','sex','sáb'];
+  let vy=ay, vm=am;
+  function desenha(){
+    const primeiroDiaSemana=new Date(vy,vm-1,1).getDay();
+    const totalDias=_ultimoDia(vy,vm);
+    let celulas='';
+    for(let i=0;i<primeiroDiaSemana;i++) celulas+=`<button class="vazio"></button>`;
+    for(let d=1;d<=totalDias;d++){
+      const ehHoje=(vy===HOJE.y&&vm===HOJE.m&&d===HOJE.d);
+      const ehSel=(vy===ay&&vm===am&&d===diaSel);
+      celulas+=`<button data-d="${d}" class="${ehHoje?'hoje':''} ${ehSel?'sel':''}">${d}</button>`;
+    }
+    sheet(`<div class="shh"><h2>${titulo||'data'}</h2>
+        <button class="x" onclick="closeSheet()">✕</button></div>
+      <div class="calwrap">
+        <div class="calnav">
+          <button data-nav="-1">‹</button><b>${AB[vm-1]} ${vy}</b><button data-nav="1">›</button>
+        </div>
+        <div class="caldow">${DOW.map(d=>`<span>${d}</span>`).join('')}</div>
+        <div class="calgd">${celulas}</div>
+      </div>`);
+    document.querySelector('[data-nav="-1"]').onclick=()=>{vm--;if(vm<1){vm=12;vy--;}desenha();};
+    document.querySelector('[data-nav="1"]').onclick=()=>{vm++;if(vm>12){vm=1;vy++;}desenha();};
+    document.querySelectorAll('.calgd button[data-d]').forEach(b=>b.onclick=()=>{
+      onPick({ano:vy,mes:vm,dia:+b.dataset.d});
+    });
+  }
+  desenha();
+}
+
 function pickTipo(cb){
   sheet(`<div class="shh"><h2>adicionar</h2><button class="x" onclick="closeSheet()">✕</button></div>`+
     ORD.map(c=>`<button class="opt" data-c="${c}"><span class="dot d-${c}">${CAT[c].i}</span>
