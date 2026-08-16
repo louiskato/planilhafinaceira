@@ -941,33 +941,54 @@ let toastT;
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');
   clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1500);}
 /* pilha de sobreposições abertas, para o botão "voltar" fechar em vez de sair */
+/* Pilha de sobreposições para o botão "voltar" fechar em vez de sair.
+   Regra: a pilha só é modificada em _empurra (push) e no popstate (pop).
+   close_/closeSheet apenas escondem o elemento e disparam history.back(),
+   deixando o popstate cuidar da pilha — evita dupla remoção e conflito de timing. */
 let _pilha=[];
 function _empurra(tipo,id){
   _pilha.push({tipo,id});
   history.pushState({sobre:true,n:_pilha.length},'');
 }
+function _esconde(item){
+  if(!item)return;
+  if(item.tipo==='sheet'){document.getElementById('ov').classList.remove('on');}
+  else{const el=document.getElementById(item.id);if(el)el.classList.remove('on');}
+}
 function open_(id){document.getElementById(id).classList.add('on');_empurra('fs',id);}
 function close_(id){
+  // se este item está no topo, um history.back resolve (popstate esconde + remove da pilha)
+  const top=_pilha[_pilha.length-1];
+  if(top && top.id===id && history.state && history.state.sobre){ history.back(); return; }
+  // fora do topo (raro): esconde direto e remove da pilha sem tocar no histórico
   document.getElementById(id).classList.remove('on');
-  // remove da pilha e recua o histórico se este era o topo
   const i=_pilha.map(x=>x.id).lastIndexOf(id);
-  if(i>=0){_pilha.splice(i,1); if(history.state&&history.state.sobre) history.back();}
+  if(i>=0)_pilha.splice(i,1);
 }
 function sheet(html){document.getElementById('sh').innerHTML=html;
   document.getElementById('ov').classList.add('on');_empurra('sheet','ov');}
 function closeSheet(){
   const el=document.getElementById('ov');
   if(!el.classList.contains('on'))return;
+  const top=_pilha[_pilha.length-1];
+  if(top && top.tipo==='sheet' && history.state && history.state.sobre){ history.back(); return; }
   el.classList.remove('on');
-  const i=_pilha.map(x=>x.id).lastIndexOf('ov');
-  if(i>=0){_pilha.splice(i,1); if(history.state&&history.state.sobre) history.back();}
+  const i=_pilha.map(x=>x.tipo).lastIndexOf('sheet');
+  if(i>=0)_pilha.splice(i,1);
+}
+/* fecha a bandeja SEM mexer no histórico — usada quando escolher um item
+   na bandeja vai abrir outra tela em seguida (a nova tela empurra seu estado,
+   reaproveitando a entrada de histórico que já existe da bandeja) */
+function fechaSheetSilencioso(){
+  document.getElementById('ov').classList.remove('on');
+  const i=_pilha.map(x=>x.tipo).lastIndexOf('sheet');
+  if(i>=0)_pilha.splice(i,1);
 }
 /* botão "voltar" do navegador: fecha a última sobreposição, não sai do site */
 window.addEventListener('popstate',()=>{
   const top=_pilha.pop();
   if(!top)return;   // nada aberto: deixa o voltar seguir normalmente
-  if(top.tipo==='sheet'){document.getElementById('ov').classList.remove('on');}
-  else{document.getElementById(top.id).classList.remove('on');}
+  _esconde(top);
 });
 
 
@@ -1561,7 +1582,7 @@ function pickTipo(cb){
   sheet(`<div class="shh"><h2>adicionar</h2><button class="x" onclick="closeSheet()">✕</button></div>`+
     ORD.map(c=>`<button class="opt" data-c="${c}"><span class="dot d-${c}">${CAT[c].i}</span>
       <span><b>${CAT[c].s}</b><span class="sub">${CAT[c].ex}</span></span></button>`).join(''));
-  document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{closeSheet();cb(b.dataset.c);});
+  document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{fechaSheetSilencioso();cb(b.dataset.c);});
 }
 
 
