@@ -42,6 +42,20 @@ No iPhone, Safari → botão compartilhar → **Adicionar à Tela de Início**.
 
 O ícone abre em tela cheia, sem barra de navegador.
 
+## Faturas do cartão
+
+Rode `faturas_cartao.sql` no SQL Editor do Supabase (uma vez). Ele liga cada
+cartão a uma tag — os cartões que já existem ficam ligados à tag de mesmo nome.
+
+- **Desktop:** painel *faturas do cartão* ao lado da grade. Digite o valor e
+  aperte Enter (pula para o próximo cartão). Apagar o valor remove a fatura do mês.
+- **Celular:** menu → *faturas do cartão*, toque no cartão e digite o valor.
+
+A fatura é um lançamento de saída com a tag do cartão, no dia do vencimento.
+Se já existe um lançamento assim no mês, ele é atualizado em vez de duplicado.
+Com a fatura informada, as assinaturas daquele cartão param de descontar à
+parte (já estão dentro da fatura) e aparecem como *na fatura*.
+
 ## Segurança
 
 A chave anon é pública por natureza — quem protege os dados é o RLS,
