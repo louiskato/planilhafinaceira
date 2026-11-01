@@ -124,6 +124,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .mrow{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;
   border-bottom:1px solid var(--line);font-size:13.5px}
 .mrow:last-child{border-bottom:none}
+.ftin{width:104px;flex-shrink:0;text-align:right;border:1px solid var(--line);border-radius:7px;
+  padding:5px 8px;background:var(--bg);color:var(--fg);font:inherit;font-size:13.5px;
+  font-variant-numeric:tabular-nums}
+.ftin::placeholder{color:var(--sub);opacity:.6;font-style:italic}
+.ftin:focus{border-color:var(--laranja);outline:none}
+.ftsub{display:block;font-size:11px;color:var(--sub);font-weight:400;margin-top:1px}
 .mrow .l{display:flex;align-items:center;gap:8px;font-weight:500}
 .mrow .dot{width:18px;height:18px;font-size:10px}
 
@@ -484,11 +490,16 @@ function aplicarRecorrencias(ano, mes, dias){
 function aplicarAssinaturas(ano, mes, dias){
   // previsão só vale para o mês atual e futuros — meses passados já têm os valores reais
   if(ano*12+mes < HOJE.y*12+HOJE.m) return;
+  // tags com fatura já informada neste mês (saída real com a tag do cartão)
+  const comFatura=new Set();
+  dias.forEach(x=>x.mov.forEach(m=>{ if(_ehFatura(m)) comFatura.add(m.tag); }));
   ASSIN.forEach(a=>{
     // confirmada neste mês? então não é mais sombra (já virou lançamento real)
     if(ACONF[`${a.id}:${ano}:${mes}`]) return;
     // cai no vencimento do cartão vinculado; sem cartão, no dia próprio da assinatura
     const cartao = a.cartaoId ? CARTOES.find(c=>c.id===a.cartaoId) : null;
+    // fatura do cartão já informada: a assinatura está dentro dela, não desconta de novo
+    if(cartao && comFatura.has(tagDoCartao(cartao))) return;
     const diaAlvo = (cartao && cartao.vence) || a.dia || 1;
     const d=Math.min(diaAlvo, dias.length);
     const dia=dias[d-1];
@@ -580,7 +591,7 @@ async function sbCarregarAuxiliares(){
   PREVDIV = pref.data?.previsao_divisor ?? 30;
   VENC = pref.data?.venc_fatura ?? null;
   CARTOES = (cart.data||[]).map(c => ({ id:c.id, nome:c.nome,
-                fecha:c.dia_fechamento, vence:c.dia_vencimento }));
+                fecha:c.dia_fechamento, vence:c.dia_vencimento, tagId:c.tag_id||null }));
   D.patrimonio = (contas.data||[]).map(c => {
     const vals = {};
     (valores.data||[]).filter(v => v.conta_id === c.id)
@@ -700,20 +711,83 @@ async function sbSalvarTag(t){                  // {id?, nome, cor, areas}
 }
 async function sbApagarTag(id){ await SB.from('tags').delete().eq('id',id); }
 
+let _cartaoTemTag = true;   // vira false se o banco ainda não tem cartoes.tag_id (rode faturas_cartao.sql)
 async function sbSalvarCartao(c){
-  if (c.id){
-    await SB.from('cartoes').update({ nome:c.nome,
-      dia_fechamento:c.fecha||null, dia_vencimento:c.vence||null }).eq('id',c.id);
-  } else {
-    const { data } = await SB.from('cartoes').insert({
-      user_id: await uidAtual(), nome:c.nome,
-      dia_fechamento:c.fecha||null, dia_vencimento:c.vence||null
-    }).select().single();
-    c.id = data?.id;
+  const linha = { nome:c.nome, dia_fechamento:c.fecha||null, dia_vencimento:c.vence||null };
+  if (_cartaoTemTag) linha.tag_id = c.tagId||null;
+  const uid = await uidAtual();
+  const exec = l => c.id
+    ? SB.from('cartoes').update(l).eq('id',c.id)
+    : SB.from('cartoes').insert({ user_id:uid, ...l }).select().single();
+  let r = await exec(linha);
+  if (r.error && _cartaoTemTag && /tag_id/.test(r.error.message||'')){
+    _cartaoTemTag = false; delete linha.tag_id; r = await exec(linha);
   }
+  if (r.error) throw r.error;
+  if (!c.id) c.id = r.data?.id;
   return c;
 }
 async function sbApagarCartao(id){ await SB.from('cartoes').delete().eq('id',id); }
+
+/* ── FATURAS DO CARTÃO ──────────────────────────────────────────
+   Cada cartão aponta para uma tag (cartoes.tag_id); sem vínculo gravado,
+   vale a tag de mesmo nome (cartão "Nubank" ↔ tag "Nubank").
+   A fatura do mês é o lançamento de SAÍDA com essa tag. Atualizar a fatura
+   edita esse lançamento (ou cria um no dia do vencimento, se não houver).
+   ─────────────────────────────────────────────────────────────── */
+const _norm = s => (s||'').trim().toLowerCase();
+const _ehFatura = (m, tagId) => m.t==='saida' && !m.rec && !m.assin && !m.previsto
+  && !!m.tag && (tagId===undefined || m.tag===tagId);
+function tagDoCartao(c){
+  if(!c) return null;
+  if(c.tagId && TAGS.some(t=>t.id===c.tagId)) return c.tagId;
+  return TAGS.find(t=>_norm(t.nome)===_norm(c.nome))?.id || null;
+}
+function cartaoDaTag(tagId){ return tagId ? (CARTOES.find(c=>tagDoCartao(c)===tagId)||null) : null; }
+/* fatura de um cartão num mês: lançamentos com a tag + assinaturas vinculadas */
+function faturaDoMes(c, y, m){
+  const mm = D.meses[_k(y,m)], tagId = tagDoCartao(c), itens = [];
+  if(mm && tagId) mm.dias.forEach(x => x.mov.forEach((mv,j) => {
+    if(_ehFatura(mv, tagId)) itens.push({ ...mv, d:x.d, j });
+  }));
+  const assin = ASSIN.filter(a=>a.cartaoId===c.id).reduce((s,a)=>s+a.valor,0);
+  const total = Math.round(itens.reduce((s,i)=>s+i.v,0)*100)/100;
+  return { itens, total, assin, informada: itens.length>0,
+           venc: Math.min(c.vence||10, _ultimoDia(y,m)) };
+}
+/* garante que o cartão tem tag: usa a de mesmo nome ou cria uma nova */
+async function garantirTagCartao(c){
+  let id = tagDoCartao(c);
+  if(!id){
+    const areas = (typeof AREAS!=='undefined' ? AREAS
+      : ['saldos','performance','economizado','custo_de_vida','diario_medio']);
+    const t = await sbSalvarTag({ nome:c.nome, cor:'#4F6E9E',
+      areas:Object.fromEntries(areas.map(a=>[a,true])) });
+    if(!t.id) throw new Error('não foi possível criar a tag '+c.nome);
+    TAGS.push(t); TAGS.sort((a,b)=>a.nome.localeCompare(b.nome)); id = t.id;
+  }
+  if(c.tagId !== id){
+    c.tagId = id;
+    if(c.id){ try{ await sbSalvarCartao(c); }catch(e){ console.warn(e); } }
+  }
+  return id;
+}
+/* define o valor TOTAL da fatura do mês. 0 = remove a fatura do mês. */
+async function sbAtualizarFatura(c, y, m, valor){
+  valor = Math.round((valor||0)*100)/100;
+  const tagId = await garantirTagCartao(c);
+  const f = faturaDoMes(c, y, m);
+  // lançamento principal: o do dia do vencimento, senão o último do mês
+  const principal = f.itens.find(i=>i.d===f.venc) || f.itens[f.itens.length-1] || null;
+  const outros = Math.round((f.total - (principal ? principal.v : 0))*100)/100;
+  const alvo = Math.round((valor - outros)*100)/100;
+  if(alvo < 0 || (alvo === 0 && outros > 0))
+    throw new Error(`há outros lançamentos com a tag ${c.nome} somando ${outros.toFixed(2).replace('.',',')} — ajuste-os na grade`);
+  if(alvo === 0){ if(principal) await sbApagarLancamento(principal.id); return; }
+  if(principal) await sbEditarLancamento(principal.id, { valor:alvo });
+  else await sbNovoLancamento({ ano:y, mes:m, dia:f.venc, tipo:'saida', valor:alvo,
+    nome:'Fatura '+c.nome, tagId });
+}
 
 /* Patrimônio: valor vazio = apagar linha (volta a herdar do mês anterior) */
 async function sbSalvarPatrimonio(contaId, ano, mes, valor){
@@ -1123,6 +1197,10 @@ function painel(){
       <span><span class="dot d-prev" style="width:15px;height:15px;font-size:8px">D</span>
       ${rs(prevDia())}</span></div></div>
   </div>
+  <div class="pnl"><div class="pnlh">faturas do cartão
+    <span style="color:var(--sub);font-weight:400;font-size:12px"> · ${AB[mes-1]}/${String(ano).slice(2)}</span></div>
+    <div id="ftBox"></div>
+  </div>
   <div class="pnl"><div class="pnlh">movimentações</div>
     ${ORD.map(c=>`<div class="mrow"><span class="l">${dt(c)}${CAT[c].n}</span>
       <span class="num">${rs(t[c])}</span></div>`).join('')}
@@ -1153,9 +1231,71 @@ function painel(){
     <button class="lrow btn" id="addAs" style="border-top:1px solid var(--line);
       justify-content:center;color:var(--sub);font-size:13px">+ adicionar assinatura</button>
   </div>`;
-  pvBox(); asBox();
+  ftBox(); pvBox(); asBox();
   document.getElementById('addPv').onclick=()=>addPrev();
   document.getElementById('addAs').onclick=()=>addAssinWeb();
+}
+/* ── faturas: atualização rápida do valor por cartão (tag) ── */
+let _ftFoco=null;
+function ftBox(){
+  const box=document.getElementById('ftBox');if(!box)return;
+  if(!CARTOES.length){
+    box.innerHTML=`<div style="padding:12px 15px;color:var(--sub);font-size:13px">
+      nenhum cartão. cadastre Nubank, Santander… — cada um usa a tag de mesmo nome
+      e aqui você atualiza o valor da fatura do mês.</div>
+      <button class="lrow btn" id="ftCards" style="border-top:1px solid var(--line);
+        justify-content:center;color:var(--sub);font-size:13px">+ cadastrar cartão</button>`;
+    document.getElementById('ftCards').onclick=()=>gerenciarCartoesWeb();return;}
+  let soma=0;
+  box.innerHTML=CARTOES.map((c,i)=>{
+    const f=faturaDoMes(c,ano,mes),tg=TAGS.find(t=>t.id===tagDoCartao(c));
+    soma+=f.informada?f.total:f.assin;
+    const det=[`vence dia ${f.venc}`];
+    if(f.itens.length>1)det.push(`${f.itens.length} lançamentos`);
+    if(f.assin)det.push((f.informada?'inclui ':'previsto ')+rs(f.assin)+' de assinaturas');
+    if(!tg)det.push('sem tag ainda');
+    return `<div class="mrow"><span class="l" style="flex:1;min-width:0;display:block;margin-right:10px">
+        <span style="display:flex;align-items:center;gap:7px">
+          <span class="dot" style="width:10px;height:10px;background:${tg?.cor||'var(--line)'}"></span>${c.nome}</span>
+        <span class="ftsub">${det.join(' · ')}</span></span>
+      <input class="ftin" data-i="${i}" inputmode="decimal" aria-label="fatura ${c.nome}"
+        value="${f.informada?brl(f.total):''}" placeholder="${f.assin?brl(f.assin):'0,00'}"></div>`;}).join('')+
+    `<div class="mrow" style="font-weight:700"><span class="l">total das faturas</span>
+      <span class="num">${rs(soma)}</span></div>`+
+    `<button class="mrow" id="ftCards" style="width:100%;background:none;border:none;
+      border-top:1px solid var(--line);color:var(--fg);font:inherit;cursor:pointer;
+      display:flex;justify-content:space-between"><span class="l" style="color:var(--sub);font-weight:400">
+      gerenciar cartões</span><span class="num" style="color:var(--laranja)">${CARTOES.length} ›</span></button>`;
+  document.getElementById('ftCards').onclick=()=>gerenciarCartoesWeb();
+  box.querySelectorAll('.ftin').forEach(inp=>{
+    const c=CARTOES[+inp.dataset.i];
+    inp.onfocus=()=>inp.select();
+    inp.onkeydown=e=>{
+      if(e.key==='Enter'){e.preventDefault();_ftFoco=+inp.dataset.i+1;inp.blur();}
+      if(e.key==='Escape'){inp.dataset.cancel='1';inp.blur();}};
+    inp.onblur=async()=>{
+      if(inp.dataset.cancel){ftBox();return;}
+      const f=faturaDoMes(c,ano,mes),txt=inp.value.trim();
+      const v=txt===''?0:parse(txt);
+      // sem mudança: só segue para o próximo cartão (Enter)
+      if((txt===''&&!f.informada)||Math.abs(v-f.total)<0.005){ftFocar(box);return;}
+      await salvarFaturaWeb(c,v);};
+  });
+  ftFocar(box);
+}
+function ftFocar(box){
+  if(_ftFoco===null)return;
+  const nx=box.querySelector(`.ftin[data-i="${_ftFoco}"]`);_ftFoco=null;
+  if(nx)nx.focus();
+}
+async function salvarFaturaWeb(c,v){
+  sync('busy');
+  try{
+    await sbAtualizarFatura(c,ano,mes,v);
+    delete D.meses[key(ano,mes)];await sbCarregarMes(ano,mes);recalcTudo();
+    grade();painel();horizonte();sync('on');
+    toast(v>0?`fatura ${c.nome}: ${rs(v)}`:`fatura ${c.nome} removida`);
+  }catch(e){ sync('off'); toast('erro: '+e.message); _ftFoco=null; ftBox(); }
 }
 function asBox(){
   const box=document.getElementById('asBox');if(!box)return;
@@ -1164,18 +1304,24 @@ function asBox(){
       nenhuma assinatura. cadastre Spotify, academia, streamings — o valor previsto
       desconta do saldo até você confirmar que caiu.</div>`;return;}
   const conf=a=>!!ACONF[`${a.id}:${ano}:${mes}`];
+  // assinatura de cartão cuja fatura do mês já foi informada: está dentro da fatura
+  const naFat=a=>{const c=a.cartaoId&&CARTOES.find(x=>x.id===a.cartaoId);
+    return !!c&&faturaDoMes(c,ano,mes).informada;};
   box.innerHTML=ASSIN.map((a,i)=>{
-    const caiu=conf(a);
-    return `<div class="mrow" style="${caiu?'opacity:.5':''}">
+    const caiu=conf(a),fat=!caiu&&naFat(a);
+    const cn=a.cartaoId?CARTOES.find(x=>x.id===a.cartaoId)?.nome:'';
+    return `<div class="mrow" style="${caiu||fat?'opacity:.5':''}">
       <span class="l" style="cursor:pointer" data-edit="${i}">${a.nome}
-        <span style="color:var(--sub);font-size:11px"> dia ${a.dia}</span></span>
+        <span style="color:var(--sub);font-size:11px"> ${cn?cn+' · ':''}dia ${a.dia}</span></span>
       <span class="num" style="margin-right:8px">${rs(a.valor)}</span>
-      <button data-conf="${i}" style="border:none;border-radius:99px;padding:3px 10px;
+      ${fat?`<span style="border-radius:99px;padding:3px 10px;font-size:11.5px;font-weight:600;
+        background:var(--bg2);color:var(--sub)" title="a fatura de ${cn} já foi informada neste mês">na fatura</span>`
+      :`<button data-conf="${i}" style="border:none;border-radius:99px;padding:3px 10px;
         font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;
         ${caiu?'background:var(--bg2);color:var(--sub)':'background:var(--verde);color:var(--verde-t)'}">
-        ${caiu?'✓ caiu':'confirmar'}</button></div>`;}).join('')+
+        ${caiu?'✓ caiu':'confirmar'}</button>`}</div>`;}).join('')+
     `<div class="mrow" style="font-weight:700"><span class="l">total previsto</span>
-      <span class="num">${rs(ASSIN.filter(a=>!conf(a)).reduce((s,a)=>s+a.valor,0))}</span></div>`+
+      <span class="num">${rs(ASSIN.filter(a=>!conf(a)&&!naFat(a)).reduce((s,a)=>s+a.valor,0))}</span></div>`+
     `<button class="mrow" id="asCardsW" style="width:100%;background:none;border:none;
       border-top:1px solid var(--line);color:var(--fg);font:inherit;cursor:pointer;
       display:flex;justify-content:space-between"><span class="l" style="color:var(--sub);font-weight:400">
@@ -1187,7 +1333,8 @@ function asBox(){
 }
 function gerenciarCartoesWeb(){
   const lista=CARTOES.map((c,i)=>`<button class="opt" data-edit="${i}" style="padding-left:17px">
-    <b>${c.nome}</b><span style="color:var(--sub);font-size:12px;margin-left:6px">vence dia ${c.vence||'?'}</span></button>`).join('');
+    <b>${c.nome}</b><span style="color:var(--sub);font-size:12px;margin-left:6px">vence dia ${c.vence||'?'}
+      · tag ${TAGS.find(t=>t.id===tagDoCartao(c))?.nome||'—'}</span></button>`).join('');
   modal(`<div class="mdlh"><h2>cartões</h2><button onclick="closeM()">✕</button></div>`+
     (lista||'<div style="padding:13px 17px;color:var(--sub);font-size:13px">nenhum cartão ainda.</div>')+
     `<button class="cta" id="cardNovoW" style="background:#4F6E9E">+ novo cartão</button>`);
@@ -1202,17 +1349,27 @@ function formCartaoWeb(i){
     <div class="lrow"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
       vence no dia <input id="ccV" type="number" min="1" max="31" value="${c.vence||10}"
         style="width:56px;margin-left:auto;text-align:center"></div>
+    <div class="lrow"><svg viewBox="0 0 24 24"><path d="M3 8v8l7 4 9-8-9-8-7 4z"/></svg>
+      tag da fatura <select id="ccT" style="margin-left:auto;max-width:60%;background:var(--bg);color:var(--fg);
+        border:1px solid var(--line);border-radius:7px;padding:5px 8px;font:inherit">
+        <option value="">mesmo nome do cartão</option>
+        ${TAGS.map(t=>`<option value="${t.id}" ${c.tagId===t.id?'selected':''}>${t.nome}</option>`).join('')}
+      </select></div>
+    <div style="padding:2px 17px 4px;color:var(--sub);font-size:12px">lançamentos de saída com essa
+      tag formam a fatura do cartão. se não existir, a tag é criada.</div>
     <button class="cta" id="ccOk" style="background:#4F6E9E">${ed?'salvar':'adicionar'} cartão</button>
     ${ed?'<button class="del" id="ccDel">excluir cartão</button>':''}`);
   setTimeout(()=>document.getElementById('ccN').focus(),60);
   document.getElementById('ccOk').onclick=async()=>{
     const nome=document.getElementById('ccN').value.trim();
     const vence=Math.min(31,Math.max(1,+document.getElementById('ccV').value||10));
+    const tagId=document.getElementById('ccT').value||null;
     if(!nome){toast('nome do cartão');return;}
     try{
-      const salvo=await sbSalvarCartao({id:ed?c.id:undefined,nome,vence,fecha:null});
-      if(ed)Object.assign(CARTOES[i],{nome,vence});
-      else CARTOES.push({id:salvo.id,nome,vence});
+      const salvo=await sbSalvarCartao({id:ed?c.id:undefined,nome,vence,fecha:ed?c.fecha:null,tagId});
+      if(ed)Object.assign(CARTOES[i],{nome,vence,tagId});
+      else CARTOES.push({id:salvo.id,nome,vence,tagId});
+      await garantirTagCartao(ed?CARTOES[i]:CARTOES[CARTOES.length-1]);
       const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
       await sbCarregarJanela(ano,mes,1,8);recalcTudo();
       grade();painel();toast('cartão salvo');gerenciarCartoesWeb();
