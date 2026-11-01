@@ -1,6 +1,6 @@
 {
-  "name": "Central Financeira",
-  "short_name": "Financeira",
+  "name": "Planilha do Luen",
+  "short_name": "Planilha do Luen",
   "description": "Saldo dia a dia, previsão de diário e horizonte de meses",
   "start_url": "/app/",
   "scope": "/app/",
