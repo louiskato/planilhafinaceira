@@ -88,6 +88,22 @@ Rode `cartoes_metas.sql` no SQL Editor (uma vez).
 - O painel lateral da aba saldos mostra só os bens; dívidas ficam na aba patrimônio.
 - O seletor de data é um calendário e permite lançar em outro mês.
 
+## Compras no cartão e tags nos cálculos
+
+Rode `compras_cartao.sql` no SQL Editor (uma vez).
+
+- **Compras no cartão**: no *adicionar*, escolha o tipo *cartão* e o cartão.
+  A compra aparece na coluna *cartão* da grade, mas não mexe no saldo do dia:
+  ela soma na fatura certa, decidida pelo **dia de fechamento** do cartão
+  (comprou no fechamento ou depois → fatura seguinte). Sem fechamento
+  cadastrado, usamos 7 dias antes do vencimento.
+- **Parcelado**: divide o valor em N parcelas mensais (no cartão, cada parcela
+  cai numa fatura). Também vale para lançamentos comuns.
+- *Cartão + repetir mensalmente* vira uma cobrança fixa do cartão.
+- **Tags**: em *onde esta tag entra nos cálculos* (desktop) ou *configurações
+  avançadas* (celular), cada área pode ser *ignorar* ou *calcular*: saldos,
+  performance, economizado, custo de vida e diário médio.
+
 ## Segurança
 
 A chave anon é pública por natureza — quem protege os dados é o RLS,
