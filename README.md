@@ -4,7 +4,7 @@ Saldo dia a dia, previsão de diário, horizonte de meses e patrimônio.
 Dados no Supabase, sincronizados entre computador e celular.
 
 ```
-/            versão completa (desktop): grade + painéis + patrimônio
+/            versão completa (desktop): barra lateral, meses lado a lado, totais, cartões, tags, patrimônio
 /app         versão mobile, instalável como PWA
 ```
 
