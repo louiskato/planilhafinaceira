@@ -183,6 +183,47 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .tgstat>div:nth-child(n+3){border-top:1px solid var(--line)}
 .tgstat span{display:block;font-size:12.5px;color:var(--sub)}
 .tgstat b{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+/* previsão por categoria */
+.pvc{display:block;width:100%;background:none;border:none;border-bottom:1px solid var(--line);padding:13px 12px;
+  text-align:left;color:var(--fg);font-family:inherit;cursor:pointer}
+.pvc:active{background:var(--wk)}
+.pvc .r1{display:flex;align-items:center;gap:9px;font-size:16px}
+.pvc .r1 b{flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvc .r2{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);margin-top:5px}
+.anl{width:100%;border-collapse:collapse;font-size:12.5px}
+.anl th{font-size:11.5px;color:var(--sub);font-weight:600;padding:7px 8px;text-align:right;border-bottom:1px solid var(--line)}
+.anl th:first-child,.anl td:first-child{text-align:left}
+.anl td{padding:8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.anl td:first-child{max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.anl tr:last-child td{font-weight:700;background:var(--bg2)}
+.anl .acima{color:var(--bad);font-weight:600}
+.anl .sm{color:var(--sub)}
+/* cartões */
+.ctm{border-bottom:8px solid var(--bg2)}
+.ctmh{display:flex;align-items:center;gap:10px;padding:14px 12px 4px}
+.ctmh b{font-size:17px;font-weight:600;flex:1}
+.ctmh .sub{color:var(--sub);font-size:13px}
+.ctmh button{background:none;border:1px solid var(--line);border-radius:8px;color:var(--sub);font:inherit;font-size:13px;padding:5px 10px}
+.ctmf{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px 12px;width:100%;
+  background:none;border:none;border-bottom:1px solid var(--line);font-family:inherit;color:var(--fg);text-align:left;cursor:pointer}
+.ctmf:active{background:var(--wk)}
+.ctmf span{display:block;font-size:12.5px;color:var(--sub)}
+.ctmf b{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.ctmf b.prev{font-style:italic;color:var(--prevc)}
+.ctmf .ed{font-size:13.5px;color:var(--btn);font-weight:600;white-space:nowrap}
+.ctmi{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line);font-size:15px}
+.ctmi .ck{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);background:none;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;cursor:pointer;padding:0}
+.ctmi .ck.on{background:var(--c-ent);border-color:var(--c-ent)}
+.ctmi .nm{flex:1;min-width:0;background:none;border:none;font:inherit;color:var(--fg);text-align:left;cursor:pointer;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0}
+.ctmi.ok .nm{color:var(--sub)}
+.ctmi .num{font-weight:600}
+.ctmadd{display:block;width:100%;padding:12px;background:none;border:none;border-bottom:1px solid var(--line);
+  color:var(--btn);font:inherit;font-size:14.5px;font-weight:600;text-align:left;cursor:pointer}
+.ctmprox{display:flex;gap:6px;padding:10px 12px 14px;font-size:12.5px;color:var(--sub);flex-wrap:wrap;align-items:center}
+.ctmprox span{background:var(--wk);border-radius:6px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.ctmprox b{color:var(--fg)}
 /* patrimônio */
 .pathero{padding:16px 12px 6px}
 .pathero span{font-size:13.5px;color:var(--sub)}
@@ -202,6 +243,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .patrow small{display:block;font-size:12.5px;color:var(--sub);font-weight:400}
 .patrow .num{font-weight:600}
 .patrow .num.herd{color:var(--sub);font-style:italic;font-weight:500}
+.metam{display:block;width:100%;background:none;border:none;border-bottom:1px solid var(--line);padding:12px;
+  text-align:left;color:var(--fg);font-family:inherit;cursor:pointer}
+.metam:active{background:var(--wk)}
+.metam .m1{display:flex;justify-content:space-between;align-items:baseline;font-size:16px}
+.metam .m1 b{font-weight:600}.metam .m1 span{font-weight:700}
+.metam .m0{font-size:12.5px;color:var(--sub);margin-top:2px}
+.metam .m2{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);margin-top:4px}
+.metam .m2 b{color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
 .mline{display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);font-size:14.5px}
 .mline span:first-child{color:var(--sub)}
 .chip{display:inline-block;padding:5px 11px;border-radius:6px;font-size:13.5px;font-weight:600;color:#fff}
@@ -496,9 +545,9 @@ section[id^=s-]{animation:fade .22s var(--e)}
   <div class="prof"><h2 id="profNome">Luis</h2></div>
   <button class="mrow" id="mPerfil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>editar perfil<span class="ar">›</span></button>
   <button class="mrow" id="mPrev"><span class="dot d-prev" style="width:22px;height:22px">D</span>
-    <span>previsão de diário<span class="sb" id="prevSub">—</span></span><span class="ar">›</span></button>
+    <span>previsão por categoria<span class="sb" id="prevSub">—</span></span><span class="ar">›</span></button>
   <button class="mrow" id="mFat"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
-    <span>faturas do cartão<span class="sb" id="fatSub">—</span></span><span class="ar">›</span></button>
+    <span>cartões<span class="sb" id="fatSub">—</span></span><span class="ar">›</span></button>
   <button class="mrow" id="mAssin"><span class="dot d-prev" style="width:22px;height:22px">A</span>
     <span>assinaturas previstas<span class="sb" id="assinSub">—</span></span><span class="ar">›</span></button>
   <button class="mrow" id="mPat"><svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M5 20V10l7-5 7 5v10"/><path d="M10 20v-5h4v5"/></svg>
@@ -542,20 +591,26 @@ section[id^=s-]{animation:fade .22s var(--e)}
 </div>
 
 <div class="fs" id="fsPv">
-  <div class="fsh"><button data-close="fsPv" aria-label="Voltar">←</button><h2>previsão de diário</h2>
-    <button id="pvAdd" aria-label="Adicionar gasto">+</button></div>
+  <div class="fsh"><button data-close="fsPv" aria-label="Voltar">←</button><h2 id="pvTit">previsão por categoria</h2>
+    <button id="pvAdd" aria-label="Adicionar categoria">+</button></div>
+  <div style="padding:10px 16px;color:var(--sub);font-size:13.5px;line-height:1.5">quanto você pretende gastar por mês
+    em cada categoria. com a tag ligada, o gasto real abate da previsão e o saldo projeta só o que falta.</div>
   <div id="pvList" style="flex:1"></div>
+  <div class="sec">previsto × real · mês a mês</div>
+  <div id="pvAnl" style="overflow-x:auto"></div>
   <div class="pvfoot">
-    <div class="pvline"><span>total mensal</span><span class="num" id="pvTot">R$ 0,00</span></div>
+    <div class="pvline"><span>previsto no mês</span><span class="num" id="pvTot">R$ 0,00</span></div>
+    <div class="pvline"><span>projeção por dia daqui pra frente</span><span class="num" id="pvDia">R$ 0,00</span></div>
     <div class="pvline"><button id="pvDiv" style="background:none;border:none;font:inherit;
       color:var(--fg);cursor:pointer;display:flex;width:100%;justify-content:space-between">
       <span>dividido por</span><span style="font-weight:400;color:var(--sub)"><span id="pvDivN">30</span> dias ▾</span></button></div>
-    <div class="pvtot num" id="pvRes">R$ 0,00</div>
+    <div class="pvline" style="font-weight:400;color:var(--sub);font-size:13px"><span>sem tag usa o total ÷ dias</span><span class="num" id="pvRes">R$ 0,00</span></div>
   </div>
 </div>
 
 <div class="fs" id="fsFat">
-  <div class="fsh"><button data-close="fsFat" aria-label="Voltar">←</button><h2>faturas do cartão</h2></div>
+  <div class="fsh"><button data-close="fsFat" aria-label="Voltar">←</button><h2 id="fatTit">cartões</h2>
+    <button id="fatNovo" aria-label="Novo cartão">+</button></div>
   <div style="padding:10px 16px;color:var(--sub);font-size:13.5px;line-height:1.5" id="fatInfo"></div>
   <div id="fatList" style="flex:1"></div>
   <div class="pvfoot">
@@ -713,19 +768,30 @@ function aplicarAssinaturas(ano, mes, dias){
   // tags com fatura já informada neste mês (saída real com a tag do cartão)
   const comFatura=new Set();
   dias.forEach(x=>x.mov.forEach(m=>{ if(_ehFatura(m)) comFatura.add(m.tag); }));
+  const porCartao={};
   ASSIN.forEach(a=>{
-    // confirmada neste mês? então não é mais sombra (já virou lançamento real)
-    if(ACONF[`${a.id}:${ano}:${mes}`]) return;
-    // cai no vencimento do cartão vinculado; sem cartão, no dia próprio da assinatura
     const cartao = a.cartaoId ? CARTOES.find(c=>c.id===a.cartaoId) : null;
-    // fatura do cartão já informada: a assinatura está dentro dela, não desconta de novo
-    if(cartao && comFatura.has(tagDoCartao(cartao))) return;
-    const diaAlvo = (cartao && cartao.vence) || a.dia || 1;
-    const d=Math.min(diaAlvo, dias.length);
-    const dia=dias[d-1];
+    if(cartao){
+      // cobrança de cartão: compõe a PREVISÃO DA FATURA (marcar no cartão não vira lançamento).
+      // fatura já informada: a cobrança está dentro dela, não desconta de novo
+      if(comFatura.has(tagDoCartao(cartao))) return;
+      (porCartao[cartao.id] ||= { cartao, total:0, n:0 });
+      porCartao[cartao.id].total += a.valor; porCartao[cartao.id].n++;
+      return;
+    }
+    // sem cartão: confirmada neste mês já virou lançamento real
+    if(ACONF[`${a.id}:${ano}:${mes}`]) return;
+    const d=Math.min(a.dia||1, dias.length), dia=dias[d-1];
     dia.assinPrev=(dia.assinPrev||0)+a.valor;
     dia.mov.push({ id:'assin:'+a.id+':'+ano+'-'+mes, assin:a.id, t:a.tipo,
       v:a.valor, desc:a.nome, tag:null, previsto:true });
+  });
+  // uma linha por cartão: "Fatura Nubank (prevista)" no dia do vencimento
+  Object.values(porCartao).forEach(({cartao,total,n})=>{
+    const d=Math.min(cartao.vence||10, dias.length), dia=dias[d-1], v=Math.round(total*100)/100;
+    dia.assinPrev=(dia.assinPrev||0)+v;
+    dia.mov.push({ id:'fatprev:'+cartao.id+':'+ano+'-'+mes, fatPrev:cartao.id, t:'saida', v,
+      desc:'Fatura '+cartao.nome+' (prevista)', tag:null, previsto:true, n });
   });
 }
 
@@ -790,7 +856,7 @@ async function sbCarregarJanela(ano, mes, antes=1, depois=8){
 }
 
 async function sbCarregarAuxiliares(){
-  const [tags, prev, pref, cart, contas, valores, recs, assin, aconf] = await Promise.all([
+  const [tags, prev, pref, cart, contas, valores, recs, assin, aconf, metasP] = await Promise.all([
     SB.from('tags').select('*').order('nome'),
     SB.from('previsao_itens').select('*').order('ordem'),
     SB.from('preferencias').select('*').maybeSingle(),
@@ -799,7 +865,8 @@ async function sbCarregarAuxiliares(){
     SB.from('patrimonio_valores').select('*'),
     SB.from('recorrencias').select('*').eq('ativa',true),
     SB.from('assinaturas').select('*').eq('ativa',true).order('ordem'),
-    SB.from('assinaturas_confirmadas').select('*')
+    SB.from('assinaturas_confirmadas').select('*'),
+    SB.from('metas_patrimonio').select('*').order('ordem')
   ]);
   REC = (recs.data||[]).map(r => ({ id:r.id, tipo:r.tipo, valor:Number(r.valor),
     nome:r.nome||'', tagId:r.tag_id||null, freq:r.frequencia, diaRef:r.dia_ref,
@@ -810,11 +877,12 @@ async function sbCarregarAuxiliares(){
   (aconf.data||[]).forEach(c => { ACONF[`${c.assinatura_id}:${c.ano}:${c.mes}`] = c.lancamento_id||true; });
   TAGS = (tags.data||[]).map(t => ({ id:t.id, nome:t.nome, cor:t.cor, areas:t.areas||{},
     limite: t.limite_mensal!=null ? Number(t.limite_mensal) : null }));
-  PREV = (prev.data||[]).map(p => ({ id:p.id, n:p.nome, v:Number(p.valor_mensal) }));
+  PREV = (prev.data||[]).map(p => ({ id:p.id, n:p.nome, v:Number(p.valor_mensal), tagId:p.tag_id||null }));
   PREVDIV = pref.data?.previsao_divisor ?? 30;
   VENC = pref.data?.venc_fatura ?? null;
   META = { valor: pref.data?.meta_patrimonio!=null ? Number(pref.data.meta_patrimonio) : null,
            prazo: pref.data?.meta_patrimonio_prazo ? String(pref.data.meta_patrimonio_prazo).slice(0,7) : null };
+  METAS = _metasDe(metasP.data, metasP.error);
   CARTOES = (cart.data||[]).map(c => ({ id:c.id, nome:c.nome,
                 fecha:c.dia_fechamento, vence:c.dia_vencimento, tagId:c.tag_id||null }));
   D.patrimonio = (contas.data||[]).map(c => {
@@ -860,6 +928,14 @@ async function sbApagarAssinatura(id){
 }
 /* confirmar: a assinatura "caiu" neste mês → vira lançamento real e sai da previsão */
 async function sbConfirmarAssinatura(a, ano, mes){
+  // cobrança de cartão: só marca que veio na fatura (o valor entra pela fatura, não duplica)
+  if(a.cartaoId){
+    const r=await SB.from('assinaturas_confirmadas').upsert({
+      assinatura_id:a.id, user_id: await uidAtual(), ano, mes, lancamento_id:null
+    }, { onConflict:'assinatura_id,ano,mes' });
+    if(r.error) throw r.error;
+    ACONF[`${a.id}:${ano}:${mes}`]=true; return null;
+  }
   const dia=Math.min(a.dia||1, _ultimoDia(ano,mes));
   const novo=await sbNovoLancamento({ano,mes,dia,tipo:a.tipo,valor:a.valor,nome:a.nome,tagId:null});
   await SB.from('assinaturas_confirmadas').upsert({
@@ -902,16 +978,20 @@ async function sbSalvarAbertura(ano, mes, valor){
   if (error) throw error;
 }
 
-async function sbSalvarPrevisao(item){          // {id?, n, v}
-  if (item.id){
-    await SB.from('previsao_itens')
-      .update({ nome:item.n, valor_mensal:item.v }).eq('id',item.id);
-  } else {
-    const { data } = await SB.from('previsao_itens').insert({
-      user_id: await uidAtual(), nome:item.n, valor_mensal:item.v, ordem:PREV.length
-    }).select().single();
-    item.id = data?.id;
+let _prevTemTag = true;   // vira false se o banco ainda não tem previsao_itens.tag_id
+async function sbSalvarPrevisao(item){          // {id?, n, v, tagId}
+  const linha = { nome:item.n, valor_mensal:item.v };
+  if (_prevTemTag) linha.tag_id = item.tagId||null;
+  const uid = await uidAtual();
+  const exec = l => item.id
+    ? SB.from('previsao_itens').update(l).eq('id',item.id)
+    : SB.from('previsao_itens').insert({ user_id:uid, ...l, ordem:PREV.length }).select().single();
+  let r = await exec(linha);
+  if (r.error && _prevTemTag && /tag_id/.test(r.error.message||'')){
+    _prevTemTag = false; delete linha.tag_id; r = await exec(linha);
   }
+  if (r.error) throw r.error;
+  if (!item.id) item.id = r.data?.id;
   return item;
 }
 async function sbApagarPrevisao(id){ await SB.from('previsao_itens').delete().eq('id',id); }
@@ -1027,29 +1107,6 @@ function _patInicio(){
     const [yy,mm]=k.split('-').map(Number), i=yy*12+mm-1; if(min===null||i<min) min=i; }));
   return min;
 }
-function calcMeta(y, m){
-  if(!META.valor) return null;
-  const atual = patLiquido(y,m), falta = Math.max(0, META.valor-atual);
-  let meses=null, porMes=null;
-  if(META.prazo){
-    const [py,pm] = META.prazo.split('-').map(Number);
-    meses = (py*12+pm)-(y*12+m);
-    porMes = meses>0 ? falta/meses : null;
-  }
-  // ritmo: média da variação mensal dos últimos 6 meses com histórico
-  const ini = _patInicio(); let soma=0, n=0;
-  for(let i=0;i<6;i++){
-    const a=_mAdd(y,m,-i), b=_mAdd(y,m,-i-1);
-    if(ini===null || (b.y*12+b.m-1) < ini) break;
-    soma += patLiquido(a.y,a.m)-patLiquido(b.y,b.m); n++;
-  }
-  const ritmo = n ? soma/n : null;
-  let chegaEm = null;
-  if(falta<=0) chegaEm = { y, m };
-  else if(ritmo && ritmo>0) chegaEm = _mAdd(y, m, Math.ceil(falta/ritmo));
-  return { valor:META.valor, prazo:META.prazo, atual, falta, meses, porMes, ritmo, chegaEm,
-           pct: META.valor>0 ? Math.min(1, Math.max(0, atual/META.valor)) : 0 };
-}
 const kmil = v => { const a=Math.abs(v);
   const s = a>=1e6 ? (a/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi'
           : a>=1000 ? (a/1000).toLocaleString('pt-BR',{maximumFractionDigits:a>=1e5?0:1})+' mil'
@@ -1129,6 +1186,120 @@ function desenhaEvolucao(el, serie, { meta=null, atual=null, alturaLinha=180, al
   box.addEventListener('pointerleave', esconde);
 }
 
+/* ── METAS DE PATRIMÔNIO (várias) ───────────────────────────────
+   tipo 'juntar': uma conta (ou o líquido) chegar a um valor até o prazo.
+   tipo 'quitar': o saldo devedor de uma dívida cair até o alvo (abater parte).
+   ─────────────────────────────────────────────────────────────── */
+let METAS = [], _metasOk = true;
+function _metasDe(rows, err){
+  if(err){ _metasOk = false;
+    // banco sem a tabela nova: mostra a meta antiga (preferencias) como meta do líquido
+    return META.valor ? [{ id:'legado', nome:'patrimônio líquido', contaId:null, tipo:'juntar',
+      alvo:META.valor, inicial:null, prazo:META.prazo, legado:true }] : []; }
+  _metasOk = true;
+  return (rows||[]).map(r=>({ id:r.id, nome:r.nome, contaId:r.conta_id||null, tipo:r.tipo,
+    alvo:Number(r.valor_alvo), inicial:r.valor_inicial!=null?Number(r.valor_inicial):null,
+    prazo:r.prazo?String(r.prazo).slice(0,7):null }));
+}
+async function sbSalvarMetaP(m){
+  if(!_metasOk) throw new Error('rode cartoes_metas.sql no Supabase para criar metas');
+  const linha = { nome:m.nome, conta_id:m.contaId||null, tipo:m.tipo, valor_alvo:m.alvo,
+    valor_inicial:m.inicial??null, prazo:m.prazo?m.prazo+'-01':null };
+  const r = m.id
+    ? await SB.from('metas_patrimonio').update(linha).eq('id',m.id)
+    : await SB.from('metas_patrimonio').insert({ user_id: await uidAtual(), ...linha, ordem:METAS.length }).select().single();
+  if(r.error) throw r.error;
+  if(!m.id) m.id = r.data?.id;
+  return m;
+}
+async function sbApagarMetaP(id){
+  const r = await SB.from('metas_patrimonio').delete().eq('id',id); if(r.error) throw r.error; }
+const contaDe = id => D.patrimonio.find(l=>l.id===id) || null;
+function valorMeta(mt, y, m){ const c = mt.contaId ? contaDe(mt.contaId) : null; return c ? pv(c,y,m) : patLiquido(y,m); }
+function calcMetaP(mt, y, m){
+  const quitar = mt.tipo==='quitar', atual = valorMeta(mt,y,m);
+  // quitar: progresso é o quanto o saldo devedor caiu desde o início
+  const ini = quitar ? (mt.inicial ?? atual) : null;
+  const falta = Math.max(0, quitar ? atual-mt.alvo : mt.alvo-atual);
+  const pct = quitar ? (ini>mt.alvo ? Math.min(1,Math.max(0,(ini-atual)/(ini-mt.alvo))) : 1)
+                     : (mt.alvo>0 ? Math.min(1,Math.max(0,atual/mt.alvo)) : 0);
+  let meses=null, porMes=null;
+  if(mt.prazo){ const [py,pm]=mt.prazo.split('-').map(Number); meses=(py*12+pm)-(y*12+m); porMes=meses>0?falta/meses:null; }
+  const hist=_patInicio(); let soma=0, n=0;
+  for(let i=0;i<6;i++){ const a=_mAdd(y,m,-i), b=_mAdd(y,m,-i-1);
+    if(hist===null || (b.y*12+b.m-1)<hist) break;
+    soma += valorMeta(mt,a.y,a.m)-valorMeta(mt,b.y,b.m); n++; }
+  const ritmo = n ? (quitar?-1:1)*soma/n : null;   // positivo = avançando na meta
+  let chegaEm=null;
+  if(falta<=0) chegaEm={y,m}; else if(ritmo && ritmo>0) chegaEm=_mAdd(y,m,Math.ceil(falta/ritmo));
+  return { ...mt, atual, ini, falta, pct, meses, porMes, ritmo, chegaEm, feito: falta<=0,
+    atrasado: porMes!==null && ritmo!==null && ritmo<porMes && falta>0 };
+}
+const _rot = c => AB[c.m-1]+'/'+String(c.y).slice(2);
+function metaLinhas(r){
+  if(r.feito) return [['meta atingida','✓']];
+  const L=[[r.tipo==='quitar'?'falta abater':'falta', rs(r.falta)]];
+  if(r.meses!==null) L.push(r.meses>0?[`por mês até ${_rot({y:+r.prazo.slice(0,4),m:+r.prazo.slice(5,7)})}`, rs(r.porMes)]:['prazo','vencido']);
+  if(r.ritmo!==null) L.push([`seu ritmo (6 meses)`, (r.ritmo>=0?'+':'−')+rs(Math.abs(r.ritmo))+'/mês']);
+  L.push(['nesse ritmo, chega em', r.chegaEm?_rot(r.chegaEm):'—']);
+  return L;
+}
+const metaDoLiquido = () => METAS.find(m=>!m.contaId && m.tipo==='juntar') || null;
+
+/* ── PREVISÃO COMO ORÇAMENTO POR CATEGORIA ──────────────────────
+   Cada item da previsão (Lazer R$ 500/mês) aponta para uma tag. No mês atual,
+   o que já foi gasto com a tag abate da previsão e só o restante é projetado
+   nos dias que faltam. Itens sem tag seguem a regra antiga (valor ÷ divisor).
+   ─────────────────────────────────────────────────────────────── */
+function prevItemTag(p){
+  if(p.tagId && TAGS.some(t=>t.id===p.tagId)) return p.tagId;
+  return TAGS.find(t=>_norm(t.nome)===_norm(p.n))?.id || null;
+}
+function gastoTagNoMes(y, m, tagId){
+  const mm = D.meses[_k(y,m)]; if(!mm || !tagId) return 0;
+  let s = 0;
+  mm.dias.forEach(x => x.mov.forEach(mv => {
+    if(!mv.previsto && mv.tag===tagId && (mv.t==='saida'||mv.t==='diario')) s += mv.v; }));
+  return Math.round(s*100)/100;
+}
+function previsaoMes(y, m){
+  const atual = y===HOJE.y && m===HOJE.m, nd = _ultimoDia(y,m);
+  const futuros = atual ? Math.max(0, nd-HOJE.d) : nd;
+  const itens = PREV.map(p => {
+    const tagId = prevItemTag(p), gasto = tagId ? gastoTagNoMes(y,m,tagId) : 0;
+    return { p, tagId, gasto, restante: Math.max(0, Math.round((p.v-gasto)*100)/100), pct: p.v ? gasto/p.v : 0 };
+  });
+  let porDia = 0;
+  itens.forEach(i => {
+    if(atual && i.tagId) porDia += futuros ? i.restante/futuros : 0;
+    else porDia += i.p.v / PREVDIV;
+  });
+  return { itens, porDia: Math.round(porDia*100)/100, futuros, atual,
+    previsto: PREV.reduce((a,p)=>a+p.v,0), gasto: itens.reduce((a,i)=>a+i.gasto,0),
+    restante: itens.reduce((a,i)=>a+(i.tagId?i.restante:0),0) };
+}
+const orcamentoDaTag = tagId => { const p = PREV.find(x=>prevItemTag(x)===tagId); return p ? p.v : null; };
+/* garante uma tag com esse nome (cria se não existir) — usado ao ligar itens/cartões */
+async function garantirTagNome(nome){
+  const t = TAGS.find(x=>_norm(x.nome)===_norm(nome)); if(t) return t.id;
+  const areas = (typeof AREAS!=='undefined' ? AREAS : ['saldos','performance','economizado','custo_de_vida','diario_medio']);
+  const cores = ['#4F6E9E','#4E8A6B','#9E5A70','#7E6A18','#5F4E8E','#7A5B3A','#A94442'];
+  const nova = await sbSalvarTag({ nome, cor: cores[TAGS.length % cores.length],
+    areas:Object.fromEntries(areas.map(a=>[a,true])) });
+  TAGS.push(nova); TAGS.sort((a,b)=>a.nome.localeCompare(b.nome)); return nova.id;
+}
+
+/* ── CARTÕES: cobranças e previsão da fatura ─────────────────── */
+const cobrancasDoCartao = c => ASSIN.filter(a=>a.cartaoId===c.id);
+const cobrancaConferida = (a,y,m) => !!ACONF[`${a.id}:${y}:${m}`];
+/* fatura de um mês: informada (lançamento com a tag) ou prevista (soma das cobranças) */
+function faturaResumo(c, y, m){
+  const cob = cobrancasDoCartao(c), prev = Math.round(cob.reduce((s,a)=>s+a.valor,0)*100)/100;
+  const f = D.meses[_k(y,m)] ? faturaDoMes(c,y,m) : { informada:false, total:0, itens:[], venc:Math.min(c.vence||10,_ultimoDia(y,m)) };
+  return { informada:f.informada, valor: f.informada ? f.total : prev, previsto:prev, cob,
+    conferidas: cob.filter(a=>cobrancaConferida(a,y,m)).length, venc:f.venc, itens:f.itens };
+}
+
 /* ── RESUMO POR TAG ─────────────────────────────────────────────
    A tag é uma categoria: soma o que saiu (saídas + diários) com ela no mês.
    Tags ligadas a um cartão aparecem como "cartões" (a soma é a fatura).
@@ -1157,7 +1328,8 @@ function resumoTags(y, m){
     return { tag:t, cartao, gasto, entrada:g.entradas[t.id]||0,
       pctTotal: g.total ? gasto/g.total : 0,
       antes, varPct: (antes && antes>0) ? (gasto-antes)/antes : null,
-      pctLimite: t.limite ? gasto/t.limite : null };
+      limite: t.limite || orcamentoDaTag(t.id), limitePrev: !t.limite && !!orcamentoDaTag(t.id),
+      pctLimite: (t.limite || orcamentoDaTag(t.id)) ? gasto/(t.limite || orcamentoDaTag(t.id)) : null };
   });
   const ord = (a,b) => b.gasto-a.gasto || a.tag.nome.localeCompare(b.tag.nome);
   return { total:g.total, semTag:g.semTag,
@@ -1272,7 +1444,7 @@ function aberturaDe(y,m){
 function recalc(y,m){
   const mm=D.meses[key(y,m)];if(!mm)return;
   mm.abertura=aberturaDe(y,m);
-  const pd=prevDia();let acc=mm.abertura;
+  const pd=previsaoMes(y,m).porDia;let acc=mm.abertura;
   mm.dias.forEach(x=>{
     x.prev=(futuro(y,m,x.d)&&pd>0)?Math.round(pd*100)/100:0;
     // assinaturas previstas descontam do saldo projetado (previsão, não lançamento)
@@ -1438,13 +1610,14 @@ function renderDay(){
         <div class="mvtop"><span class="dot ${isA?'d-assin':isRec?'d-prev':'d-'+m.t}">${isA?'A':CAT[m.t].i}</span>
           <b>${m.desc||CAT[m.t].s}${isRec?' <span style="font-size:12px;color:var(--sub);font-weight:400">· recorrente</span>':''}</b>
           <span class="vl ${isA?'vprev':''}">${rs(m.v)}</span></div>
-        <div class="mvsub"><span>${dd}</span><span>${isA?'assinatura prevista · toque para confirmar':CAT[m.t].s}</span></div>
+        <div class="mvsub"><span>${dd}</span><span>${m.fatPrev?`${m.n} cobrança${m.n>1?'s':''} · abrir cartão`:isA?'conta fixa prevista · toque para confirmar':CAT[m.t].s}</span></div>
         ${tg?`<div style="padding-left:31px"><span class="chip" style="background:${tg.cor}">${tg.nome}</span></div>`:''}
       </button>`;}).join('');
     body.querySelectorAll('.mvrow').forEach(b=>b.onclick=()=>{
       const m=x.mov[+b.dataset.j];
       if(m.rec){gerenciarRegra(m.rec);return;}
       if(m.assin){gerenciarAssinPrev(m.assin);return;}
+      if(m.fatPrev){renderFat();open_('fsFat');return;}
       novo(m.t,{...m,j:+b.dataset.j,edit:true});});
   }
 }
@@ -1496,7 +1669,7 @@ function totais(){
    <div class="card"><div><h3>diário médio</h3><div class="frm">
      ${dt('diario')}<span class="op">/</span><span style="color:var(--sub)">${dv}</span></div></div>
      <div class="rt"><b>${rs(media)}</b>
-     <span><span class="dot d-prev">D</span> ${rs(prevDia())}</span></div></div>`;
+     <span><span class="dot d-prev">D</span> ${rs(previsaoMes(ano,mes).porDia)}</span></div></div>`;
   document.getElementById('movs').innerHTML=
     ORD.map(c=>`<button class="mv" data-c="${c}"><span class="l">${dt(c)}${CAT[c].n}</span>
       <span class="num">${rs(t[c])}</span></button>`).join('')+
@@ -1508,17 +1681,17 @@ function totais(){
      <span style="color:var(--sub)">× ${restam}</span></span><span class="num">${rs(t.prev)}</span></button>`;
   document.getElementById('prevLink').onclick=()=>{renderPrev();open_('fsPv');};
   document.getElementById('prevSub').textContent=
-    PREV.length?`${rs(prevDia())} por dia`:'nenhum gasto cadastrado';
+    PREV.length?`${rs(previsaoMes(ano,mes).porDia)} por dia daqui pra frente`:'nenhuma categoria';
 }
 
 /* ── tags ── */
 const pct=v=>(v>0&&v<.005)?'<1%':Math.round(v*100)+'%';
 function tagLinha(l,maior){
-  const t=l.tag,lim=t.limite;
+  const t=l.tag,lim=l.limite;
   const larg=lim?Math.min(100,l.pctLimite*100):(l.gasto/maior*100);
   const corBar=lim&&l.pctLimite>1?'var(--bad)':(lim&&l.pctLimite>=.9?'var(--warn)':t.cor);
   const esq=l.cartao?`fatura · vence dia ${l.cartao.vence||'?'}`
-    :lim?`<span class="${l.pctLimite>1?'over':''}">${pct(l.pctLimite)} de ${rs(lim)}${l.pctLimite>1?' · estourou':''}</span>`
+    :lim?`<span class="${l.pctLimite>1?'over':''}">${pct(l.pctLimite)} de ${rs(lim)}${l.limitePrev?' previsto':''}${l.pctLimite>1?' · estourou':''}</span>`
     :(l.gasto?`${pct(l.pctTotal)} do gasto`:(l.entrada?`recebido ${rs(l.entrada)}`:'sem gasto no mês'));
   let dir='';
   if(l.varPct!==null){const v=Math.round(l.varPct*100);
@@ -1565,8 +1738,8 @@ function renderTagDet(){
     ${sem?`<div class="tgtot"><span>gasto sem tag em ${AB[mes-1]}</span><b>${rs(gasto)}</b></div>`
     :`<div class="tgstat">
       <div><span>gasto em ${AB[mes-1]}</span><b>${rs(gasto)}</b></div>
-      <div><span>${l.cartao?'cartão':'limite'}</span><b class="${t.limite&&gasto>t.limite?'over':''}">${
-        l.cartao?l.cartao.nome:(t.limite?(gasto>t.limite?rs(gasto-t.limite)+' acima':rs(t.limite-gasto)+' livre'):'—')}</b></div>
+      <div><span>${l.cartao?'cartão':l.limitePrev?'previsto':'limite'}</span><b class="${l.limite&&gasto>l.limite?'over':''}">${
+        l.cartao?l.cartao.nome:(l.limite?(gasto>l.limite?rs(gasto-l.limite)+' acima':rs(l.limite-gasto)+' livre'):'—')}</b></div>
       <div><span>mês anterior</span><b>${l.antes===null?'—':rs(l.antes)}</b></div>
       <div><span>do gasto total</span><b>${pct(l.pctTotal)}</b></div></div>`}
     <div style="flex:1">${itens.length?itens.map(m=>{
@@ -1642,45 +1815,85 @@ function criarTag(tag){
 /* ── previsão ── */
 function renderPrev(){
   const box=document.getElementById('pvList');
+  document.getElementById('pvTit').textContent=`previsão · ${AB[mes-1]}/${String(ano).slice(2)}`;
+  const pm=previsaoMes(ano,mes),passado=(ano*12+mes)<(HOJE.y*12+HOJE.m);
   if(!PREV.length){
     box.innerHTML=`<div class="empty" style="flex:1;background:var(--bg2)">
       <button class="ecirc" id="pvAdd2"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-      <p>adicione seus gastos mensais aproximados para calcular a previsão de diário.</p></div>`;
+      <p>cadastre categorias como cabeleireiro, saúde, jantares, com quanto pretende gastar por mês.</p></div>`;
     document.getElementById('pvAdd2').onclick=()=>addPrev();
   }else{
-    box.innerHTML=PREV.map((p,i)=>`<button class="pvrow" data-i="${i}">
-      <span>${p.n}</span><span class="num">${rs(p.v)}</span></button>`).join('');
-    box.querySelectorAll('.pvrow').forEach(b=>b.onclick=()=>addPrev(+b.dataset.i));
+    box.innerHTML=pm.itens.map((it,i)=>{
+      const t=TAGS.find(x=>x.id===it.tagId),over=it.gasto>it.p.v;
+      return `<button class="pvc" data-i="${i}">
+        <div class="r1"><span class="tgdot" style="background:${t?.cor||'var(--line)'}"></span><b>${it.p.n}</b>
+          <span class="num">${rs(it.p.v)}</span></div>
+        ${it.tagId?`<div class="tgtrk" style="margin-top:7px"><i style="width:${Math.min(100,it.pct*100)}%;background:${over?'var(--bad)':(t?.cor||'var(--sub)')}"></i></div>
+          <div class="r2"><span class="${over?'over':''}">gasto ${rs(it.gasto)}${over?' · estourou':''}</span>
+            <span>${passado||over?'':'restam '+rs(it.restante)}</span></div>`
+        :`<div class="r2"><span>sem tag · não acompanha o gasto</span><span style="color:var(--btn)">ligar ›</span></div>`}</button>`;}).join('');
+    box.querySelectorAll('.pvc').forEach(b=>b.onclick=()=>addPrev(+b.dataset.i));
   }
-  const t=PREV.reduce((a,b)=>a+b.v,0);
-  document.getElementById('pvTot').textContent=rs(t);
+  document.getElementById('pvTot').textContent=rs(pm.previsto);
+  document.getElementById('pvDia').textContent=rs(pm.porDia);
   document.getElementById('pvDivN').textContent=PREVDIV;
-  document.getElementById('pvRes').textContent=rs(PREVDIV?t/PREVDIV:0);
+  document.getElementById('pvRes').textContent=rs(PREVDIV?pm.previsto/PREVDIV:0)+'/dia';
+  // mês a mês: últimos 4 meses carregados
+  const anl=document.getElementById('pvAnl');
+  const meses=[];for(let k=-3;k<=0;k++){const t=_mAdd(ano,mes,k);if(D.meses[key(t.y,t.m)])meses.push(t);}
+  if(!PREV.length||!meses.length){anl.innerHTML='';return;}
+  const tot=meses.map(()=>0);
+  anl.innerHTML=`<table class="anl"><thead><tr><th>categoria</th><th>prev.</th>${meses.map(t=>`<th>${AB[t.m-1]}</th>`).join('')}</tr></thead><tbody>`+
+    PREV.map(p=>{const tg=prevItemTag(p);
+      return `<tr><td>${p.n}</td><td class="sm">${kmil(p.v)}</td>${meses.map((t,i)=>{
+        if(!tg)return '<td class="sm">—</td>';const v=gastoTagNoMes(t.y,t.m,tg);tot[i]+=v;
+        return `<td class="${v>p.v?'acima':v===0?'sm':''}">${kmil(v)}</td>`;}).join('')}</tr>`;}).join('')+
+    `<tr><td>total</td><td>${kmil(pm.previsto)}</td>${tot.map(v=>`<td class="${v>pm.previsto?'acima':''}">${kmil(v)}</td>`).join('')}</tr></tbody></table>`;
 }
 function addPrev(i){
-  const ed=i!==undefined,p=ed?PREV[i]:{n:'',v:0};
-  sheet(`<div class="bigamt"><span class="cur">R$</span>
-     <input id="gpV" inputmode="decimal" value="${p.v?brl(p.v):''}" placeholder="0,00">
-     <button class="x" onclick="closeSheet()" style="background:none;border:none;font-size:22px;
-       color:var(--sub);cursor:pointer;line-height:1">✕</button></div>
-   <div class="linerow"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg>
-     <input id="gpN" value="${p.n}" placeholder="descrição"></div>
-   <button class="ctaslim" id="gpOk">${ed?'salvar':'adicionar'} gasto mensal</button>
-   ${ed?'<button class="del" id="gpDel">excluir</button>':'<div style="height:6px"></div>'}`);
-  setTimeout(()=>document.getElementById('gpV').focus(),80);
-  document.getElementById('gpOk').onclick=async()=>{
-    const n=document.getElementById('gpN').value.trim(),v=parse(document.getElementById('gpV').value);
-    if(!n||v<=0){toast('preencha nome e valor');return;}
-    sync('busy');
-    try{
-      if(ed){const it={...PREV[i],n,v};await sbSalvarPrevisao(it);PREV[i]=it;}
-      else{const it=await sbSalvarPrevisao({n,v});PREV.push(it);}
-      closeSheet();recalcTudo();renderPrev();render();toast('previsão atualizada');sync('on');
-    }catch(e){ sync('off'); toast('erro: '+e.message); }};
-  if(ed)document.getElementById('gpDel').onclick=async()=>{
-    try{ if(PREV[i].id) await sbApagarPrevisao(PREV[i].id); }
-    catch(e){ toast('erro: '+e.message); return; }
-    PREV.splice(i,1);closeSheet();recalcTudo();renderPrev();render();toast('gasto removido');};
+  const ed=i!==undefined,p=ed?PREV[i]:{n:'',v:0,tagId:null};
+  let tagSel=ed?(prevItemTag(p)||'_auto'):'_auto';
+  const nomeTag=()=>tagSel==='_auto'?'mesmo nome (cria se não existir)':tagSel==='_nenhuma'?'sem tag':(TAGS.find(t=>t.id===tagSel)?.nome||'—');
+  const desenha=(n,v)=>{
+    sheet(`<div class="bigamt"><span class="cur">R$</span>
+       <input id="gpV" inputmode="decimal" value="${v}" placeholder="0,00">
+       <button class="x" onclick="closeSheet()" style="background:none;border:none;font-size:22px;
+         color:var(--sub);cursor:pointer;line-height:1">✕</button></div>
+     <div class="linerow"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg>
+       <input id="gpN" value="${n}" placeholder="categoria (ex: cabeleireiro)"></div>
+     <button class="linerow" id="gpT" style="width:100%;background:none;border:none;border-bottom:1px solid var(--line);
+       text-align:left;color:var(--fg);cursor:pointer;font-family:inherit">
+       <svg viewBox="0 0 24 24"><path d="M3 8v8l7 4 9-8-9-8-7 4z"/></svg>
+       tag <span style="margin-left:auto;color:var(--sub);font-size:14px">${nomeTag()}</span></button>
+     <div style="padding:8px 15px 0;color:var(--sub);font-size:13px">valor por mês. marque os lançamentos com a tag para o gasto abater da previsão.</div>
+     <button class="ctaslim" id="gpOk">${ed?'salvar':'adicionar'} categoria</button>
+     ${ed?'<button class="del" id="gpDel">excluir</button>':'<div style="height:6px"></div>'}`);
+    setTimeout(()=>document.getElementById(ed?'gpV':'gpN')?.focus(),80);
+    document.getElementById('gpT').onclick=()=>{
+      const nA=document.getElementById('gpN').value,vA=document.getElementById('gpV').value;
+      sheet(`<div class="shh"><h2>tag</h2><button class="x" onclick="closeSheet()">✕</button></div>
+        <button class="opt" data-t="_auto" style="padding-left:15px"><b>mesmo nome da categoria</b></button>`+
+        TAGS.filter(t=>!cartaoDaTag(t.id)).map(t=>`<button class="opt" data-t="${t.id}" style="padding-left:15px">
+          <span class="dot" style="width:14px;height:14px;background:${t.cor}"></span><b>${t.nome}</b></button>`).join('')+
+        `<button class="opt" data-t="_nenhuma" style="padding-left:15px"><b>sem tag</b></button>`);
+      document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{tagSel=b.dataset.t;fechaSheetSilencioso();desenha(nA,vA);});};
+    document.getElementById('gpOk').onclick=async()=>{
+      const n2=document.getElementById('gpN').value.trim(),v2=parse(document.getElementById('gpV').value);
+      if(!n2||v2<=0){toast('preencha categoria e valor');return;}
+      sync('busy');
+      try{
+        const tagId=tagSel==='_nenhuma'?null:tagSel==='_auto'?await garantirTagNome(n2):tagSel;
+        if(ed){const it={...PREV[i],n:n2,v:v2,tagId};await sbSalvarPrevisao(it);PREV[i]=it;}
+        else{const it=await sbSalvarPrevisao({n:n2,v:v2,tagId});PREV.push(it);}
+        closeSheet();recalcTudo();renderPrev();render();sync('on');
+        toast(!_prevTemTag&&tagId&&!TAGS.some(t=>t.id===tagId&&_norm(t.nome)===_norm(n2))?'salvo; a tag só fica ligada após rodar cartoes_metas.sql':'previsão atualizada');
+      }catch(e){ sync('off'); toast('erro: '+e.message); }};
+    if(ed)document.getElementById('gpDel').onclick=async()=>{
+      try{ if(PREV[i].id) await sbApagarPrevisao(PREV[i].id); }
+      catch(e){ toast('erro: '+e.message); return; }
+      PREV.splice(i,1);closeSheet();recalcTudo();renderPrev();render();toast('categoria removida');};
+  };
+  desenha(p.n,p.v?brl(p.v):'');
 }
 
 function quantDias(){return M().dias.length;}
@@ -1703,42 +1916,31 @@ const pv=(l,y,m)=>pvInfo(l,y,m).v;
 function patBruto(y,m){return D.patrimonio.filter(l=>l.cat!=='saldo_devedor').reduce((a,l)=>a+pv(l,y,m),0);}
 function patDivida(y,m){return D.patrimonio.filter(l=>l.cat==='saldo_devedor').reduce((a,l)=>a+pv(l,y,m),0);}
 function patLiquido(y,m){return patBruto(y,m)-patDivida(y,m);}
-function metaTexto(mt){
-  const L=[];
-  if(mt.falta<=0) L.push(['meta atingida','🎉']);
-  else{
-    L.push(['falta',rs(mt.falta)]);
-    if(mt.meses!==null) L.push(mt.meses>0?[`por mês até ${rotuloMes({y:+mt.prazo.slice(0,4),m:+mt.prazo.slice(5,7)})}`,rs(mt.porMes)]:['prazo','vencido']);
-    if(mt.ritmo!==null) L.push(['seu ritmo (média 6 meses)',(mt.ritmo>=0?'+':'')+rs(mt.ritmo)+'/mês']);
-    L.push(['nesse ritmo, chega em',mt.chegaEm?rotuloMes(mt.chegaEm):'—']);
-  }
-  return L;
-}
 function atualizaPatSub(){
   const el=document.getElementById('patSub');if(!el)return;
   if(!D.patrimonio.length){el.textContent='—';return;}
-  const mt=calcMeta(ano,mes);
-  el.textContent=`líquido ${rs(patLiquido(ano,mes))}`+(mt?` · ${Math.round(mt.pct*100)}% da meta`:'');
+  el.textContent=`líquido ${rs(patLiquido(ano,mes))}`+(METAS.length?` · ${METAS.length} meta${METAS.length>1?'s':''}`:'');
 }
 function renderPat(){
   document.getElementById('patTit').textContent=`patrimônio · ${rotuloMes({y:ano,m:mes})}`;
   const box=document.getElementById('patBody');
   const pl=patLiquido(ano,mes),a=antes(ano,mes),ini=_patInicio();
   const d=(ini===null||mIdx(a.y,a.m)<ini)?0:pl-patLiquido(a.y,a.m);
-  const mt=calcMeta(ano,mes);
-  const atrasado=mt&&mt.porMes!==null&&mt.ritmo!==null&&mt.ritmo<mt.porMes&&mt.falta>0;
+  const metas=METAS.map(m=>calcMetaP(m,ano,mes));
   box.innerHTML=`<div class="pathero"><span>patrimônio líquido</span><b>${rs(pl)}</b>
       <span style="color:${d>0?'var(--ok)':d<0?'var(--bad)':'var(--sub)'};font-weight:600">${d>0?'+':''}${rs(d)} vs ${AB[a.m-1]}</span></div>
     <div id="patChart" style="padding:4px 12px 8px"></div>
-    <div class="sec" style="display:flex;justify-content:space-between">meta
-      <button id="ptMeta" style="background:none;border:none;color:var(--btn);font:inherit;font-size:14px;cursor:pointer">${mt?'editar':'definir'}</button></div>
-    ${mt?`<div style="padding:4px 12px 10px;border-bottom:1px solid var(--line)">
-        <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <b style="font-size:17px">${Math.round(mt.pct*100)}%</b><span style="color:var(--sub);font-size:13.5px">de ${rs(mt.valor)}</span></div>
-        <div class="metabar"><i style="width:${mt.pct*100}%"></i></div></div>
-      ${metaTexto(mt).map(([k,v],i)=>`<div class="mline"><span>${k}</span><span class="num" style="${atrasado&&i===2?'color:var(--bad)':''}">${v}</span></div>`).join('')}`
+    <div class="sec" style="display:flex;justify-content:space-between">metas
+      <button id="ptMeta" style="background:none;border:none;color:var(--btn);font:inherit;font-size:14px;cursor:pointer">+ nova meta</button></div>
+    ${metas.length?metas.map((r,i)=>{const c=r.contaId?contaDe(r.contaId):null;
+      return `<button class="metam" data-i="${i}">
+        <div class="m1"><b>${r.nome}</b><span>${Math.round(r.pct*100)}%</span></div>
+        <div class="m0">${r.tipo==='quitar'?'quitar':'juntar'} · ${c?c.nome:'patrimônio líquido'}${r.prazo?' · até '+_rot({y:+r.prazo.slice(0,4),m:+r.prazo.slice(5,7)}):''}</div>
+        <div class="metabar"><i style="width:${r.pct*100}%;background:${r.feito?'var(--ok)':r.tipo==='quitar'?'var(--c-car)':'var(--laranja)'}"></i></div>
+        ${metaLinhas(r).map(([k,v],j)=>`<div class="m2"><span>${k}</span><b style="${r.atrasado&&j===2?'color:var(--bad)':''}">${v}</b></div>`).join('')}
+      </button>`;}).join('')
     :`<div style="padding:4px 12px 14px;color:var(--sub);font-size:14px;line-height:1.5;border-bottom:1px solid var(--line)">
-        defina um objetivo (ex.: R$ 100 mil até dez/27) para ver quanto falta e quanto guardar por mês.</div>`}
+        crie metas como reserva de emergência de R$ 20 mil até jun/27 ou abater R$ 10 mil do financiamento até dez/27.</div>`}
     ${CATORD.map(cat=>{const ls=D.patrimonio.filter(l=>l.cat===cat);if(!ls.length)return '';
       return `<div class="sec">${CATLBL[cat]}</div>`+ls.map(l=>{const inf=pvInfo(l,ano,mes);
         const herd=!inf.proprio&&inf.de;
@@ -1750,8 +1952,9 @@ function renderPat(){
   const serie=[];for(let i=-11;i<=0;i++){const c=_mAdd(ano,mes,i);
     if(ini!==null&&mIdx(c.y,c.m)<ini)continue;serie.push({...c,v:patLiquido(c.y,c.m)});}
   desenhaEvolucao(document.getElementById('patChart'),serie.length?serie:[{y:ano,m:mes,v:pl}],
-    {meta:META.valor,atual:{y:ano,m:mes},alturaLinha:170,alturaVar:46});
-  document.getElementById('ptMeta').onclick=formMeta;
+    {meta:metaDoLiquido()?.alvo||null,atual:{y:ano,m:mes},alturaLinha:170,alturaVar:46});
+  document.getElementById('ptMeta').onclick=()=>formMetaP();
+  box.querySelectorAll('.metam').forEach(b=>b.onclick=()=>formMetaP(+b.dataset.i));
   box.querySelectorAll('.patrow').forEach(b=>b.onclick=()=>editarConta(b.dataset.id));
   atualizaPatSub();
 }
@@ -1766,7 +1969,7 @@ function editarConta(id){
    ${raw===undefined&&inf.de?`<div style="padding:8px 15px 0;color:var(--sub);font-size:13px">hoje repete ${rs(inf.v)} de ${rotuloMes(inf.de)}.</div>`:''}
    <button class="ctaslim" id="pcOk">salvar valor de ${AB[mes-1]}</button>
    ${raw!==undefined?'<button class="del" id="pcDel">limpar (repetir o mês anterior)</button>':'<div style="height:6px"></div>'}`);
-  setTimeout(()=>{const e=document.getElementById('pcV');e.focus();e.select();},80);
+  setTimeout(()=>{const e=document.getElementById('pcV');if(e){e.focus();e.select();}},80);
   const salvar=async v=>{
     sync('busy');
     try{
@@ -1780,25 +1983,62 @@ function editarConta(id){
   document.getElementById('pcV').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ok();}};
   const del=document.getElementById('pcDel');if(del)del.onclick=()=>salvar(null);
 }
-function formMeta(){
-  sheet(`<div class="shh"><h2>meta de patrimônio</h2><button class="x" onclick="closeSheet()">✕</button></div>
-    <div class="bigamt"><span class="cur">R$</span>
-      <input id="mtV" inputmode="decimal" placeholder="100.000,00" value="${META.valor?brl(META.valor):''}"></div>
-    <div class="linerow"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-      prazo <input id="mtP" type="month" value="${META.prazo||''}" style="width:auto;margin-left:auto;text-align:right"></div>
-    <div style="padding:8px 15px 0;color:var(--sub);font-size:13px">sobre o patrimônio líquido (bens − dívidas). prazo é opcional.</div>
-    <button class="ctaslim" id="mtOk">salvar meta</button>
-    ${META.valor?'<button class="del" id="mtDel">remover meta</button>':'<div style="height:6px"></div>'}`);
-  setTimeout(()=>document.getElementById('mtV').focus(),80);
-  const salvar=async(v,pz)=>{
-    sync('busy');
-    try{ await sbSalvarMeta(v,pz); closeSheet(); toast(v?'meta salva':'meta removida'); renderPat(); sync('on'); }
-    catch(e){ sync('off'); toast('erro: '+e.message); }};
-  document.getElementById('mtOk').onclick=()=>{
-    const v=parse(document.getElementById('mtV').value);
-    if(v<=0){toast('informe o valor da meta');return;}
-    salvar(v,document.getElementById('mtP').value||null);};
-  const del=document.getElementById('mtDel');if(del)del.onclick=()=>salvar(null,null);
+function formMetaP(i){
+  const ed=i!==undefined, m=ed?METAS[i]:{nome:'',tipo:'juntar',contaId:null,alvo:0,prazo:null};
+  let tipo=m.tipo,contaId=m.contaId;
+  const desenha=(nome,valor,prazo)=>{
+    const contas=D.patrimonio.filter(l=>tipo==='quitar'?l.cat==='saldo_devedor':l.cat!=='saldo_devedor');
+    if(tipo==='quitar'&&!contas.some(c=>c.id===contaId))contaId=contas[0]?.id||null;
+    if(tipo==='juntar'&&contaId&&!contas.some(c=>c.id===contaId))contaId=null;
+    const c=contaId?contaDe(contaId):null;
+    sheet(`<div class="shh"><h2>${ed?'editar meta':'nova meta'}</h2><button class="x" onclick="closeSheet()">✕</button></div>
+      <div style="display:flex;gap:8px;padding:0 15px 12px">
+        ${['juntar','quitar'].map(t=>`<button class="mtt" data-t="${t}" style="flex:1;padding:10px;border-radius:10px;font:inherit;font-size:14px;
+          border:1.5px solid ${tipo===t?'var(--btn)':'var(--line)'};background:${tipo===t?'var(--btn)':'none'};color:${tipo===t?'var(--btnfg)':'var(--fg)'};font-weight:600">
+          ${t==='juntar'?'juntar dinheiro':'quitar dívida'}</button>`).join('')}</div>
+      <div class="linerow" style="border-top:1px solid var(--line)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg>
+        <input id="mpN" value="${nome}" placeholder="${tipo==='quitar'?'ex: abater financiamento':'ex: reserva de emergência'}"></div>
+      <button class="linerow" id="mpC" style="width:100%;background:none;border:none;border-bottom:1px solid var(--line);
+        text-align:left;color:var(--fg);cursor:pointer;font-family:inherit">
+        <svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M5 20V10l7-5 7 5v10"/></svg>
+        ${tipo==='quitar'?'dívida':'conta'} <span style="margin-left:auto;color:var(--sub);font-size:14px">${c?c.nome:(tipo==='quitar'?'cadastre uma dívida':'patrimônio líquido')}</span></button>
+      <div class="linerow"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10"/></svg>
+        <input id="mpV" inputmode="decimal" value="${valor}" placeholder="${tipo==='quitar'?'quanto quer abater':'valor total a juntar'}"></div>
+      <div class="linerow"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        até <input id="mpP" type="month" value="${prazo||''}" style="width:auto;margin-left:auto;text-align:right"></div>
+      <div style="padding:8px 15px 0;color:var(--sub);font-size:13px">${tipo==='quitar'
+        ?(c?`saldo devedor hoje ${rs(pv(c,ano,mes))}. o progresso conta a partir de agora.`:'cadastre a dívida em saldo devedor na versão completa.')
+        :`hoje: ${rs(c?pv(c,ano,mes):patLiquido(ano,mes))}`}</div>
+      <button class="ctaslim" id="mpOk">${ed?'salvar':'criar'} meta</button>
+      ${ed?'<button class="del" id="mpDel">excluir meta</button>':'<div style="height:6px"></div>'}`);
+    const le=()=>[document.getElementById('mpN').value,document.getElementById('mpV').value,document.getElementById('mpP').value];
+    document.querySelectorAll('.mtt').forEach(b=>b.onclick=()=>{const [n,v,pz]=le();tipo=b.dataset.t;fechaSheetSilencioso();desenha(n,v,pz);});
+    document.getElementById('mpC').onclick=()=>{const [n,v,pz]=le();
+      sheet(`<div class="shh"><h2>${tipo==='quitar'?'dívida':'conta'}</h2><button class="x" onclick="closeSheet()">✕</button></div>`+
+        (tipo==='juntar'?`<button class="opt" data-c="" style="padding-left:15px"><b>patrimônio líquido (tudo)</b></button>`:'')+
+        contas.map(x=>`<button class="opt" data-c="${x.id}" style="padding-left:15px"><span><b>${x.nome}</b>
+          <span class="sub">${rs(pv(x,ano,mes))}</span></span></button>`).join(''));
+      document.querySelectorAll('#sh .opt').forEach(b=>b.onclick=()=>{contaId=b.dataset.c||null;fechaSheetSilencioso();desenha(n,v,pz);});};
+    document.getElementById('mpOk').onclick=async()=>{
+      const [n,vt,pz]=le(),v=parse(vt),nome2=n.trim();
+      if(!nome2||v<=0){toast('dê um nome e um valor');return;}
+      if(tipo==='quitar'&&!contaId){toast('escolha a dívida');return;}
+      let alvo=v,inicial=null;
+      if(tipo==='quitar'){
+        inicial=(ed&&m.tipo==='quitar'&&m.contaId===contaId&&m.inicial!=null)?m.inicial:pv(contaDe(contaId),ano,mes);
+        alvo=Math.max(0,Math.round((inicial-v)*100)/100);}
+      sync('busy');
+      try{
+        const salvo=await sbSalvarMetaP({id:ed&&!m.legado?m.id:undefined,nome:nome2,tipo,contaId,alvo,inicial,prazo:pz||null});
+        if(ed)METAS[i]={...m,...salvo,legado:false};else METAS.push(salvo);
+        closeSheet();renderPat();sync('on');toast('meta salva');
+      }catch(e){ sync('off'); toast('erro: '+e.message); }};
+    if(ed)document.getElementById('mpDel').onclick=async()=>{
+      try{ if(!m.legado)await sbApagarMetaP(m.id); else await sbSalvarMeta(null,null); }catch(e){toast('erro: '+e.message);return;}
+      METAS.splice(i,1);closeSheet();renderPat();toast('meta excluída');};
+  };
+  const vIni=ed?(m.tipo==='quitar'?(m.inicial??0)-m.alvo:m.alvo):0;
+  desenha(m.nome,vIni?brl(vIni):'',m.prazo);
 }
 
 /* ── faturas do cartão: atualização rápida do valor pela tag do cartão ── */
@@ -1807,37 +2047,54 @@ function atualizaFatSub(){
   if(!CARTOES.length){el.textContent='nenhum cartão';return;}
   const fs=CARTOES.map(c=>faturaDoMes(c,ano,mes));
   const inf=fs.filter(f=>f.informada).length;
-  el.textContent=`${rs(fs.reduce((s,f)=>s+(f.informada?f.total:f.assin),0))} em ${AB[mes-1]} · ${inf} de ${fs.length} informada${fs.length>1?'s':''}`;
+  el.textContent=`faturas ${rs(CARTOES.reduce((s,c)=>s+faturaResumo(c,ano,mes).valor,0))} em ${AB[mes-1]} · ${inf} de ${fs.length} informada${fs.length>1?'s':''}`;
 }
 function renderFat(){
-  document.getElementById('fatInfo').textContent=
-    `valor da fatura de cada cartão em ${AB[mes-1]}/${String(ano).slice(2)}. o lançamento fica com a tag `+
-    `do cartão, no dia do vencimento. assinaturas do cartão ficam dentro da fatura informada.`;
+  document.getElementById('fatTit').textContent=`cartões · ${AB[mes-1]}/${String(ano).slice(2)}`;
+  document.getElementById('fatInfo').innerHTML=
+    `as cobranças de cada cartão formam a <span style="color:var(--prevc);font-style:italic">fatura prevista</span>,
+     que já desconta do saldo no vencimento. marque cada cobrança quando aparecer na fatura e informe o valor real quando ela fechar.`;
   const box=document.getElementById('fatList');
   document.getElementById('fatCardsN').textContent=CARTOES.length+' ›';
   if(!CARTOES.length){
     box.innerHTML=`<div class="empty" style="flex:1;background:var(--bg2)">
       <button class="ecirc" id="fatAdd2"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-      <p>cadastre seus cartões (Nubank, Santander…). cada um usa a tag de mesmo nome.</p></div>`;
-    document.getElementById('fatAdd2').onclick=()=>gerenciarCartoes(()=>renderFat());
-    document.getElementById("fatTot").textContent=rs(0);atualizaFatSub();return;}
+      <p>cadastre seus cartões (Nubank, Santander…) e as cobranças de cada um para ver a fatura prevista.</p></div>`;
+    document.getElementById('fatAdd2').onclick=()=>formCartao(undefined,()=>renderFat());
+    document.getElementById('fatTot').textContent=rs(0);atualizaFatSub();return;}
   let soma=0;
   box.innerHTML=CARTOES.map((c,i)=>{
-    const f=faturaDoMes(c,ano,mes),tg=TAGS.find(t=>t.id===tagDoCartao(c));
-    soma+=f.informada?f.total:f.assin;
-    const det=[`vence dia ${f.venc}`];
-    if(f.assin)det.push((f.informada?'inclui ':'previsto ')+rs(f.assin)+' de assinaturas');
-    return `<button class="pvrow" data-i="${i}">
-      <span style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-width:0">
-        <span style="display:flex;align-items:center;gap:8px">
-          <span class="dot" style="width:12px;height:12px;background:${tg?.cor||'var(--line)'}"></span>${c.nome}</span>
-        <span style="font-size:12.5px;font-weight:400;color:var(--sub)">${det.join(' · ')}</span></span>
-      <span class="num" style="${f.informada?'':'color:var(--sub);font-weight:400;font-style:italic'}">${
-        f.informada?rs(f.total):(f.assin?rs(f.assin):'informar')}</span></button>`;}).join('');
-  box.querySelectorAll('.pvrow').forEach(b=>b.onclick=()=>editarFatura(+b.dataset.i));
+    const r=faturaResumo(c,ano,mes),tg=TAGS.find(t=>t.id===tagDoCartao(c));soma+=r.valor;
+    const prox=[1,2,3].map(k=>{const t=_mAdd(ano,mes,k),f=faturaResumo(c,t.y,t.m);
+      return `<span>${AB[t.m-1]} <b>${f.valor?kmil(f.valor):'—'}</b></span>`;}).join('');
+    return `<div class="ctm">
+      <div class="ctmh"><span class="tgdot" style="background:${tg?.cor||'var(--line)'}"></span><b>${c.nome}</b>
+        <span class="sub">dia ${r.venc}</span><button data-ed="${i}">editar</button></div>
+      <button class="ctmf" data-fat="${i}"><div><span>fatura de ${AB[mes-1]} · ${r.informada?'informada':'prevista'}</span>
+          <b class="${r.informada?'':'prev'}">${rs(r.valor)}</b></div><span class="ed">${r.informada?'alterar':'informar valor'}</span></button>
+      ${r.cob.length?`<div class="tgsec" style="display:flex;justify-content:space-between"><span>cobranças</span>
+        <span>${r.conferidas} de ${r.cob.length} na fatura</span></div>`:''}
+      ${r.cob.map(a=>{const ok=cobrancaConferida(a,ano,mes),ix=ASSIN.indexOf(a);
+        return `<div class="ctmi ${ok?'ok':''}"><button class="ck ${ok?'on':''}" data-a="${ix}" aria-label="marcar ${a.nome}">${ok?'✓':''}</button>
+          <button class="nm" data-ea="${ix}">${a.nome}</button><span class="num">${rs(a.valor)}</span></div>`;}).join('')}
+      <button class="ctmadd" data-add="${c.id}">+ cobrança neste cartão</button>
+      <div class="ctmprox">próximos ${prox}</div></div>`;}).join('');
+  box.querySelectorAll('[data-fat]').forEach(b=>b.onclick=()=>editarFatura(+b.dataset.fat));
+  box.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>formCartao(+b.dataset.ed,()=>renderFat()));
+  box.querySelectorAll('[data-ea]').forEach(b=>b.onclick=()=>{_voltaFat=true;addAssin(+b.dataset.ea);});
+  box.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{
+    const c=CARTOES.find(x=>x.id===b.dataset.add);
+    _novaAssinTmp={nome:'',valor:0,dia:c.vence||10,tipo:'saida',cartaoId:c.id};_voltaFat=true;addAssin();});
+  box.querySelectorAll('.ck[data-a]').forEach(b=>b.onclick=async()=>{
+    const a=ASSIN[+b.dataset.a],ok=cobrancaConferida(a,ano,mes);
+    sync('busy');
+    try{ if(ok)await sbDesconfirmarAssinatura(a,ano,mes); else await sbConfirmarAssinatura(a,ano,mes);
+      renderFat();sync('on'); }
+    catch(e){ sync('off'); toast('erro: '+e.message); }});
   document.getElementById('fatTot').textContent=rs(soma);
   atualizaFatSub();
 }
+let _voltaFat=false;
 function editarFatura(i){
   const c=CARTOES[i],f=faturaDoMes(c,ano,mes);
   sheet(`<div class="bigamt"><span class="cur">R$</span>
@@ -1854,7 +2111,7 @@ function editarFatura(i){
      lançamentos com a tag ${c.nome} neste mês; o valor é o total deles.</div>`:''}
    <button class="ctaslim" id="ftOk">atualizar fatura</button>
    ${f.informada?'<button class="del" id="ftDel">remover fatura do mês</button>':'<div style="height:6px"></div>'}`);
-  setTimeout(()=>{const el=document.getElementById('ftV');el.focus();el.select();},80);
+  setTimeout(()=>{const el=document.getElementById('ftV');if(el){el.focus();el.select();}},80);
   const salvar=async v=>{
     sync('busy');
     try{
@@ -1961,7 +2218,7 @@ function formCartao(i,aoFechar){
         c.tagId?(TAGS.find(t=>t.id===c.tagId)?.nome||'mesmo nome'):'mesmo nome do cartão'}</span></button>
     <button class="ctaslim" id="ccOk">${ed?'salvar':'adicionar'} cartão</button>
     ${ed?'<button class="del" id="ccDel">excluir cartão</button>':''}`);
-  setTimeout(()=>document.getElementById('ccN').focus(),80);
+  setTimeout(()=>document.getElementById('ccN')?.focus(),80);
   let vence=c.vence||10;
   document.getElementById('ccVenc').onclick=()=>{
     const nAtual=document.getElementById('ccN').value;
@@ -2025,7 +2282,7 @@ function addAssin(i){
        a.cartaoId?(CARTOES.find(c=>c.id===a.cartaoId)?.nome||'—'):'nenhum (dia '+a.dia+')'}</span></button>
    <button class="ctaslim" id="asOk">${ed?'salvar':'adicionar'} assinatura</button>
    ${ed?'<button class="del" id="asDel">excluir</button>':'<div style="height:6px"></div>'}`);
-  setTimeout(()=>document.getElementById('asV').focus(),80);
+  setTimeout(()=>document.getElementById('asV')?.focus(),80);
   let cartaoId=a.cartaoId||null;
   document.getElementById('asCard').onclick=()=>{
     const nomeAtual=document.getElementById('asN').value;
@@ -2056,7 +2313,8 @@ function addAssin(i){
       // recarregar meses para refletir a sombra
       const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
       await sbCarregarJanela(ano,mes,1,8);recalcTudo();
-      closeSheet();renderAssin();render();toast('assinatura salva');sync('on');
+      closeSheet();renderAssin();render();toast(cartaoId?'cobrança salva':'conta fixa salva');sync('on');
+      if(document.getElementById('fsFat').classList.contains('on'))renderFat();
     }catch(e){ sync('off'); toast('erro: '+e.message); }};
   if(ed)document.getElementById('asDel').onclick=async()=>{
     try{ if(ASSIN[i].id) await sbApagarAssinatura(ASSIN[i].id); }
@@ -2064,7 +2322,8 @@ function addAssin(i){
     ASSIN.splice(i,1);
     const chaves=Object.keys(D.meses);for(const k of chaves)delete D.meses[k];
     await sbCarregarJanela(ano,mes,1,8);recalcTudo();
-    closeSheet();renderAssin();render();toast('assinatura removida');};
+    closeSheet();renderAssin();render();toast('removida');
+    if(document.getElementById('fsFat').classList.contains('on'))renderFat();};
 }
 
 
@@ -2102,7 +2361,7 @@ function formNovo(){
    <button class="cta" id="ctaBtn" style="background:${t.c}">${form.edit?'salvar':'adicionar'} ${t.s}</button>
    <button class="cancel" id="cancelNovo">cancelar</button>
    ${form.edit?'<button class="del" id="delMov">excluir movimentação</button>':''}`;
-  setTimeout(()=>document.getElementById('amtIn').focus(),120);
+  setTimeout(()=>document.getElementById('amtIn')?.focus(),120);
   const sync=()=>{form.valor=parse(document.getElementById('amtIn').value);
     form.desc=document.getElementById('descIn').value;};
   document.getElementById('cancelNovo').onclick=()=>close_('fsNew');
@@ -2360,6 +2619,7 @@ function ligarEventos(){
   document.getElementById('mFat').onclick=()=>{renderFat();open_('fsFat');};
   document.getElementById('mPat').onclick=()=>{open_('fsPat');renderPat();};
   document.getElementById('fatCards').onclick=()=>gerenciarCartoes(()=>renderFat());
+  document.getElementById('fatNovo').onclick=()=>formCartao(undefined,()=>renderFat());
   document.getElementById('asAdd').onclick=()=>addAssin();
   document.getElementById('mConf').onclick=()=>open_('fsConf');
   document.getElementById('mSair').onclick=()=>sbLogout();

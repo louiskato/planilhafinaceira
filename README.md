@@ -71,6 +71,23 @@ das tags e a meta de patrimônio.
   meta com prazo (quanto falta, quanto guardar por mês, quando chega no ritmo
   atual) e, no celular, menu → *patrimônio* para atualizar os valores do mês.
 
+## Cartões, previsão por categoria e metas
+
+Rode `cartoes_metas.sql` no SQL Editor (uma vez).
+
+- **Cartões** (aba no desktop; menu → *cartões* no celular): cada cartão mostra a
+  fatura do mês — *prevista* pela soma das cobranças (assinaturas, mensalidades)
+  ou *informada* com o valor real —, o checklist das cobranças para marcar
+  quando aparecerem na fatura e a previsão dos próximos meses. Na grade, as
+  cobranças viram uma linha só: *Fatura Nubank (prevista)* no vencimento.
+- **Previsão por categoria**: cada item (cabeleireiro, saúde, jantares…) aponta
+  para uma tag. No mês atual, o que já foi gasto com a tag abate da previsão e
+  o saldo projeta só o restante. A aba *tags* tem o quadro previsto × real mês a mês.
+- **Metas de patrimônio**: várias, cada uma *juntar* (numa conta ou no
+  líquido) ou *quitar* (abater parte de uma dívida), com prazo.
+- O painel lateral da aba saldos mostra só os bens; dívidas ficam na aba patrimônio.
+- O seletor de data é um calendário e permite lançar em outro mês.
+
 ## Segurança
 
 A chave anon é pública por natureza — quem protege os dados é o RLS,
