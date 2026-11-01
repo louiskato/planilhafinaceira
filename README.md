@@ -1,4 +1,4 @@
-# Central Financeira
+# Planilha do Luen
 
 Saldo dia a dia, previsão de diário, horizonte de meses e patrimônio.
 Dados no Supabase, sincronizados entre computador e celular.
