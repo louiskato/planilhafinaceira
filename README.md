@@ -56,6 +56,21 @@ Se já existe um lançamento assim no mês, ele é atualizado em vez de duplicad
 Com a fatura informada, as assinaturas daquele cartão param de descontar à
 parte (já estão dentro da fatura) e aparecem como *na fatura*.
 
+## Tags, assinaturas e patrimônio
+
+Rode `remodelagem.sql` no SQL Editor (uma vez). Ele adiciona o limite mensal
+das tags e a meta de patrimônio.
+
+- **Tags** são categorias: a aba *tags* (desktop e celular) mostra quanto saiu
+  em cada uma no mês, a fatia do gasto total, a comparação com o mês anterior
+  e, se a tag tiver limite, quanto já foi usado. Tags ligadas a um cartão
+  aparecem em *cartões*. Toque/clique numa tag para ver os lançamentos dela.
+- **Assinaturas previstas** aparecem na grade com o valor tracejado (roxo).
+  Clicar nelas abre *confirmar que caiu* ou *editar assinatura*.
+- **Patrimônio**: gráfico de evolução do líquido com a variação de cada mês,
+  meta com prazo (quanto falta, quanto guardar por mês, quando chega no ritmo
+  atual) e, no celular, menu → *patrimônio* para atualizar os valores do mês.
+
 ## Segurança
 
 A chave anon é pública por natureza — quem protege os dados é o RLS,
