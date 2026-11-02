@@ -27,6 +27,7 @@
   --ok:#2E7D32;--warn:#8A5A00;--bad:#C62828;--prevc:#7A5CC2;
 }
 [data-t=dark]{
+  color-scheme:dark;
   --bg:#141416;--bg2:#1A1A1D;--fg:#F2F2F2;--sub:#8A8A8E;--line:#28282C;--wk:#1F1F23;
   --verde:#7A9E68;--verde-t:#0C160A;
   --verm:#AC5A5A;--verm-t:#1C0707;
@@ -35,6 +36,13 @@
   --ok:#86C98A;--warn:#E5B54A;--bad:#F2836B;--prevc:#B9A3F0;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--sub) 55%,transparent) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--sub) 45%,transparent);border-radius:99px;
+  border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--sub) 75%,transparent)}
+::-webkit-scrollbar-corner{background:transparent}
 body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--fg);
   font-size:14px;-webkit-font-smoothing:antialiased}
 .num{font-variant-numeric:tabular-nums}
@@ -282,8 +290,15 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .perpop button:last-child{border-bottom:none}
 .perpop button:hover{background:var(--wk)}
 /* meses lado a lado */
-.meses{display:flex;gap:18px;overflow-x:auto;padding:14px 20px 8px;scroll-snap-type:x proximity;scroll-padding-inline:20px;align-items:flex-start}
-.mcard{flex:0 0 min(1080px,calc(100% - 80px));min-width:680px;scroll-snap-align:start}
+.meses{display:flex;gap:18px;overflow-x:auto;padding:14px 52px 8px;scroll-snap-type:x proximity;scroll-padding-inline:52px;align-items:flex-start}
+.mcard{flex:0 0 min(1080px,calc(100% - 50px));min-width:680px;scroll-snap-align:start}
+.mesesw{position:relative}
+.mseta{position:absolute;top:50%;transform:translateY(-50%);z-index:6;width:36px;height:36px;border-radius:50%;
+  border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:24px;line-height:1;padding-bottom:3px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);transition:opacity .2s,background .15s}
+.mseta:hover{background:var(--wk)}
+.mseta.l{left:8px}.mseta.r{right:8px}
+.mseta[hidden]{display:block!important;opacity:0;pointer-events:none}
 .mcard h3{font-size:15px;font-weight:700;padding:0 2px 9px;display:flex;align-items:baseline;gap:10px}
 .mcard h3 small{font-size:12px;font-weight:500;color:var(--sub)}
 .mcard.foco h3{color:var(--laranja)}
@@ -608,8 +623,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 </header>
 
 <div id="v-grade">
-  <div class="meses" id="meses"></div>
-  <p class="hint">Clique numa célula para ver e lançar; no saldo, para ver o dia inteiro. Valores
+  <div class="mesesw">
+    <button class="mseta l" id="msL" aria-label="mês anterior" title="mês anterior (←)">‹</button>
+    <div class="meses" id="meses"></div>
+    <button class="mseta r" id="msR" aria-label="próximo mês" title="próximo mês (→)">›</button>
+  </div>
+  <p class="hint">Clique numa célula para ver e lançar; no saldo, para ver o dia inteiro. Para trocar de mês, use as setas
+    ‹ › nas laterais, as setas do teclado ou a rodinha do mouse sobre o título do mês. Valores
     <span style="color:var(--prevc);border-bottom:1.5px dashed var(--prevc);font-style:italic">tracejados</span>
     são previsões (faturas ainda não informadas, contas fixas não confirmadas); em itálico cinza, a previsão de diário.</p>
 </div>
@@ -1589,7 +1609,7 @@ function foco(y,m){
 function rolaParaFoco(linhaHoje){
   const box=document.getElementById('meses'),card=box.querySelector('.mcard.foco')||box.querySelector('.mcard');
   if(!card)return;
-  box.scrollLeft+=card.getBoundingClientRect().left-box.getBoundingClientRect().left-20;
+  box.scrollLeft+=card.getBoundingClientRect().left-box.getBoundingClientRect().left-52;
   const hj=card.querySelector('.gridrow.hj');
   if(hj&&linhaHoje!==false){const gb=card.querySelector('.gbody');gb.scrollTop=Math.max(0,hj.offsetTop-gb.offsetTop-90);}
 }
@@ -1629,6 +1649,51 @@ function mesHTML(y,m,mm,r){
         <div>${rs(fim)}</div></div>
     </div></section>`;
 }
+/* ── navegação lateral entre os meses: setas, rodinha do mouse e teclado ── */
+function cardAtual(){
+  const box=document.getElementById('meses'),bx=box.getBoundingClientRect().left+52;
+  const cards=[...box.querySelectorAll('.mcard')];
+  let i=0,best=1e9;cards.forEach((c,k)=>{const d=Math.abs(c.getBoundingClientRect().left-bx);if(d<best){best=d;i=k;}});
+  return {cards,i};
+}
+let _alvoCard=null;   // destino de uma rolagem ainda em andamento (cliques/teclas rápidos somam)
+function irCard(dir){
+  const box=document.getElementById('meses'),{cards,i:atual}=cardAtual();
+  const i=(_alvoCard&&Date.now()<_alvoCard.ate)?_alvoCard.i:atual;
+  const k=Math.max(0,Math.min(cards.length-1,i+dir)),alvo=cards[k];if(!alvo)return;
+  _alvoCard={i:k,ate:Date.now()+550};
+  box.scrollTo({left:box.scrollLeft+alvo.getBoundingClientRect().left-box.getBoundingClientRect().left-52,behavior:'smooth'});
+}
+function setasMeses(){
+  const box=document.getElementById('meses');if(!box)return;
+  const fim=box.scrollWidth-box.clientWidth;
+  document.getElementById('msL').hidden=box.scrollLeft<=4;
+  document.getElementById('msR').hidden=box.scrollLeft>=fim-4;
+}
+function ligarRolagemMeses(){
+  const box=document.getElementById('meses');
+  document.getElementById('msL').onclick=()=>irCard(-1);
+  document.getElementById('msR').onclick=()=>irCard(1);
+  box.addEventListener('scroll',setasMeses,{passive:true});
+  window.addEventListener('resize',setasMeses);
+  // rodinha vertical fora das linhas dos dias = troca de mês (dentro das linhas, rola os dias)
+  let acc=0,trava=0;
+  box.addEventListener('wheel',e=>{
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY))return;           // trackpad já rola de lado
+    if(e.target.closest('.gbody'))return;
+    e.preventDefault();
+    if(Date.now()<trava)return;
+    acc+=e.deltaY;
+    if(Math.abs(acc)>=40){irCard(acc>0?1:-1);acc=0;trava=Date.now()+380;}
+  },{passive:false});
+  document.addEventListener('keydown',e=>{
+    if(pagina!=='grade'||e.altKey||e.ctrlKey||e.metaKey)return;
+    if(document.getElementById('ov').classList.contains('on'))return;
+    if(/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||''))return;
+    if(e.key==='ArrowRight'){e.preventDefault();irCard(1);}
+    if(e.key==='ArrowLeft'){e.preventDefault();irCard(-1);}
+  });
+}
 function grade(){
   const box=document.getElementById('meses');if(!box)return;
   document.getElementById('perLbl').textContent=perLabel();
@@ -1643,6 +1708,7 @@ function grade(){
     foco(+b.dataset.y,+b.dataset.m);abreCelula(+b.dataset.i,b.dataset.c);});
   box.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>{
     foco(+el.dataset.y,+el.dataset.m);verDia(+el.dataset.open);});
+  setasMeses();
 }
 /* ── pop-up da célula: lista os lançamentos daquela categoria no dia ── */
 function abreCelula(i,c){
@@ -2822,7 +2888,7 @@ async function irHoje(){
   if(!D.meses[key(HOJE.y,HOJE.m)])await sbCarregarJanela(HOJE.y,HOJE.m,1,8),recalcTudo();
   foco(HOJE.y,HOJE.m);render();
   if(pagina!=='grade')mostrarPagina('grade');
-  rolaParaFoco();
+  rolaParaFoco();setasMeses();
 }
 function adicionarRapido(){
   pickTipo(async c=>{
@@ -2868,6 +2934,7 @@ function ligarEventos(){
   document.getElementById('sbAdd').onclick=()=>adicionarRapido();
   document.getElementById('sbHz').onclick=()=>mostrarPagina('horizonte');
   document.querySelectorAll('#perNav [data-sh]').forEach(b=>b.onclick=()=>mudaPeriodo(+b.dataset.sh));
+  ligarRolagemMeses();
   document.getElementById('perBtn').onclick=e=>escolhePreset(e.currentTarget);
   document.querySelectorAll('.menuit[data-ir]').forEach(b=>b.onclick=()=>mostrarPagina(b.dataset.ir));
   const temaSub=()=>{const el=document.getElementById('mnTemaSub');
@@ -2908,7 +2975,7 @@ async function iniciar(){
     await garantirPeriodo();
     patIni={y:HOJE.y,m:1};patFim={y:HOJE.y,m:12};
     patSel();render();
-    requestAnimationFrame(()=>rolaParaFoco());
+    requestAnimationFrame(()=>{rolaParaFoco();setasMeses();});
     sync('on');
     let debounce;
     sbEscutar(()=>{clearTimeout(debounce);debounce=setTimeout(async()=>{
