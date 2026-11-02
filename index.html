@@ -10,7 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Planilha do Luen">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-<link rel="icon" href="/icons/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -250,7 +251,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
   background:var(--bg2);padding:14px 0 10px;overflow-y:auto;overflow-x:hidden}
 .sbbrand{display:flex;align-items:center;gap:10px;padding:2px 18px 18px;font-weight:700;font-size:14px;white-space:nowrap}
 .sbbrand i{color:var(--laranja);font-style:normal}
-.sblogo svg{width:24px;height:24px;stroke:var(--laranja);fill:none;stroke-width:1.9;display:block}
+.sblogo svg{width:26px;height:26px;display:block;stroke:none}
+.sblogo .lL{fill:var(--fg)}.sblogo .lP{fill:var(--laranja)}
 .sb .tabs{display:flex;flex-direction:column;margin:0;gap:0}
 .sb .tabs button,.sbbtn{display:flex;align-items:center;gap:13px;padding:11px 18px;background:none;border:none;
   border-left:3px solid transparent;border-radius:0;color:var(--fg);font:inherit;font-size:14px;font-weight:600;
@@ -585,7 +587,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 
 <div class="shell" id="shell">
 <nav class="sb" aria-label="navegação">
-  <div class="sbbrand"><span class="sblogo"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 3h10l2 3H5z"/></svg></span>
+  <div class="sbbrand"><span class="sblogo"><svg viewBox="110 100 292 312" aria-hidden="true"><path class="lL" d="M150 120h62v210h120v62H150z"/><circle class="lP" cx="332" cy="361" r="31"/></svg></span>
     <span class="lbl">planilha do luen<i>.</i></span></div>
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected="true" data-v="grade"><svg viewBox="0 0 24 24"><path d="M3 5h18M3 10h18M3 15h18M3 20h18"/><path d="M8 5v15"/></svg><span class="lbl">saldos</span></button>
