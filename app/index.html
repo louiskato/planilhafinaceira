@@ -1205,23 +1205,25 @@ function totArea(y, m, area){
   return t;
 }
 
-/* ── FATURA PREVISTA ────────────────────────────────────────────
-   Enquanto o valor real da fatura não é informado, ela é prevista pela soma
-   das cobranças fixas do cartão e desconta do saldo no vencimento.
+/* ── FATURA DO CARTÃO ────────────────────────────────────────────
+   Sem valor digitado: a fatura prevista é a soma das cobranças fixas.
+   Com valor digitado (o que o app do banco mostra): fatura = esse valor +
+   as cobranças fixas que ainda NÃO foram marcadas como "veio na fatura".
+   A parte que falta cair entra como previsão no vencimento.
    ─────────────────────────────────────────────────────────────── */
 function aplicarFaturasMes(y, m){
   const mm = D.meses[_k(y,m)]; if(!mm) return;
   mm.dias.forEach(x => { x.mov = x.mov.filter(mv=>!mv.fatPrev); x.fatPrevV = 0; });
   if(y*12+m < HOJE.y*12+HOJE.m) return;               // meses passados: só o valor real
   CARTOES.forEach(c => {
-    if(faturaDoMes(c,y,m).informada) return;          // valor real já informado
-    const cob = ASSIN.filter(a=>a.cartaoId===c.id);
+    const informada = faturaDoMes(c,y,m).informada;
+    const cob = ASSIN.filter(a=>a.cartaoId===c.id && (!informada || !cobrancaConferida(a,y,m)));
     const v = Math.round(cob.reduce((s,a)=>s+a.valor,0)*100)/100;
     if(!v) return;
     const d = Math.min(c.vence||10, mm.dias.length), dia = mm.dias[d-1];
     dia.fatPrevV = (dia.fatPrevV||0) + v;
     dia.mov.push({ id:'fatprev:'+c.id+':'+y+'-'+m, fatPrev:c.id, t:'saida', v,
-      desc:'Fatura '+c.nome+' (prevista)', tag:null, previsto:true, n: cob.length });
+      desc: informada ? `Fatura ${c.nome} (a cair)` : `Fatura ${c.nome} (prevista)`, tag:null, previsto:true, n: cob.length });
   });
 }
 /* lançamento parcelado comum: N lançamentos mensais com o valor dividido */
@@ -1347,10 +1349,13 @@ const cobrancasDoCartao = c => ASSIN.filter(a=>a.cartaoId===c.id);
 const cobrancaConferida = (a,y,m) => !!ACONF[`${a.id}:${y}:${m}`];
 /* fatura de um mês: informada (lançamento com a tag) ou prevista (soma das cobranças) */
 function faturaResumo(c, y, m){
-  const cob = cobrancasDoCartao(c);
-  const prev = Math.round(((y*12+m >= HOJE.y*12+HOJE.m) ? cob.reduce((s,a)=>s+a.valor,0) : 0)*100)/100;
+  const cob = cobrancasDoCartao(c), futuro = y*12+m >= HOJE.y*12+HOJE.m;
+  const soma = l => Math.round(l.reduce((s,a)=>s+a.valor,0)*100)/100;
+  const prev = futuro ? soma(cob) : 0;                                   // sem valor digitado
   const f = D.meses[_k(y,m)] ? faturaDoMes(c,y,m) : { informada:false, total:0, itens:[], venc:Math.min(c.vence||10,_ultimoDia(y,m)) };
-  return { informada:f.informada, valor: f.informada ? f.total : prev, previsto:prev, cob,
+  const aCair = futuro && f.informada ? soma(cob.filter(a=>!cobrancaConferida(a,y,m))) : 0;
+  return { informada:f.informada, banco: f.informada ? f.total : 0, aCair,
+    valor: f.informada ? Math.round((f.total+aCair)*100)/100 : prev, previsto:prev, cob,
     conferidas: cob.filter(a=>cobrancaConferida(a,y,m)).length, venc:f.venc, itens:f.itens };
 }
 
@@ -2135,8 +2140,8 @@ const _ctAbertos=new Set();   // cartões com a lista de fixas aberta
 function renderFat(){
   document.getElementById('fatTit').textContent=`cartões · ${AB[mes-1]}/${String(ano).slice(2)}`;
   document.getElementById('fatInfo').innerHTML=
-    `informe o valor da fatura de cada cartão. enquanto não informa, as cobranças fixas formam a
-     <span style="color:var(--prevc);font-style:italic">fatura prevista</span>, que já desconta do saldo no vencimento.`;
+    `digite o valor que o app do banco mostra. a fatura fica = esse valor + as cobranças fixas que ainda não
+     apareceram lá (não marcadas). sem valor digitado, as fixas formam a <span style="color:var(--prevc);font-style:italic">fatura prevista</span>.`;
   const box=document.getElementById('fatList');
   document.getElementById('fatCardsN').textContent=CARTOES.length+' ›';
   if(!CARTOES.length){
@@ -2151,15 +2156,19 @@ function renderFat(){
     return `<div class="ctm" data-c="${c.id}">
       <div class="ctmh"><span class="tgdot" style="background:${tg?.cor||'var(--line)'}"></span><b>${c.nome}</b>
         <span class="sub">vence dia ${r.venc}</span><button data-ed="${i}">editar</button></div>
-      <button class="ctmf" data-fat="${i}"><div><span>fatura de ${AB[mes-1]} · ${r.informada?'informada':'prevista'}</span>
-          <b class="${r.informada?'':'prev'}">${rs(r.valor)}</b></div><span class="ed">${r.informada?'alterar':'informar valor'}</span></button>
+      <button class="ctmf" data-fat="${i}"><div><span>fatura de ${AB[mes-1]} · ${r.informada?(r.aCair?'parcial':'informada'):'prevista'}</span>
+          <b class="${r.informada&&!r.aCair?'':'prev'}">${rs(r.valor)}</b>
+          <span>${r.informada?(r.aCair?`${rs(r.banco)} do banco + ${rs(r.aCair)} a cair`:'valor do banco'):'soma das cobranças fixas'}</span></div>
+        <span class="ed">${r.informada?'atualizar':'informar valor'}</span></button>
       <button class="ctmtog" data-tog="${c.id}">
-        <span>cobranças fixas ${r.cob.length?`<b>${rs(r.cob.reduce((s,a)=>s+a.valor,0))}</b> · ${r.conferidas} de ${r.cob.length} na fatura`:'· nenhuma'}</span>
+        <span>cobranças fixas ${r.cob.length?`<b>${rs(r.cob.reduce((s,a)=>s+a.valor,0))}</b> · ${r.conferidas} de ${r.cob.length} já no banco`:'· nenhuma'}</span>
         <span>${ab?'▴':'▾'}</span></button>
       ${ab?r.cob.map(a=>{const ok=cobrancaConferida(a,ano,mes),ix=ASSIN.indexOf(a);
         return `<div class="ctmi ${ok?'ok':''}"><button class="ck ${ok?'on':''}" data-a="${ix}" aria-label="marcar ${a.nome}">${ok?'✓':''}</button>
           <button class="nm" data-ea="${ix}">${a.nome}</button><span class="num">${rs(a.valor)}</span></div>`;}).join('')+
-        `<button class="ctmadd" data-add="${c.id}">+ cobrança fixa neste cartão</button>`:''}
+        `<div class="ctmi" style="color:var(--sub);font-size:13px;line-height:1.45">marque quando a cobrança já aparecer no app do banco:
+          ela sai da conta porque já está no valor que você digitou.</div>
+        <button class="ctmadd" data-add="${c.id}">+ cobrança fixa neste cartão</button>`:''}
       </div>`;}).join('');
   box.querySelectorAll('[data-fat]').forEach(b=>b.onclick=()=>editarFatura(+b.dataset.fat));
   box.querySelectorAll('[data-tog]').forEach(b=>b.onclick=()=>{const id=b.dataset.tog;
@@ -2173,7 +2182,7 @@ function renderFat(){
     const a=ASSIN[+b.dataset.a],ok=cobrancaConferida(a,ano,mes);
     sync('busy');
     try{ if(ok)await sbDesconfirmarAssinatura(a,ano,mes); else await sbConfirmarAssinatura(a,ano,mes);
-      renderFat();sync('on'); }
+      recalcTudo();render();renderFat();sync('on'); }    // marcar muda a parte "a cair"
     catch(e){ sync('off'); toast('erro: '+e.message); }});
   document.getElementById('fatTot').textContent=rs(soma);
   atualizaFatSub();
@@ -2189,11 +2198,11 @@ function editarFatura(i){
    <div class="linerow"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
      <span>fatura ${c.nome} · ${AB[mes-1]}/${String(ano).slice(2)}</span>
      <span style="margin-left:auto;color:var(--sub);font-size:14px">dia ${f.venc}</span></div>
-   ${fr.previsto?`<div style="padding:8px 15px 0;color:var(--sub);font-size:13px">a previsão é ${rs(fr.previsto)}
-     (cobranças fixas). o valor real substitui a previsão.</div>`:''}
+   <div style="padding:8px 15px 0;color:var(--sub);font-size:13px;line-height:1.45">digite o valor que aparece no app do banco.
+     ${fr.cob.length?`as cobranças fixas ainda não marcadas (${rs(fr.cob.filter(a=>!cobrancaConferida(a,ano,mes)).reduce((s,a)=>s+a.valor,0))}) somam por cima.`:''}</div>
    ${f.itens.length>1?`<div style="padding:8px 15px 0;color:var(--sub);font-size:13px">há ${f.itens.length}
      lançamentos com a tag ${c.nome} neste mês; o valor é o total deles.</div>`:''}
-   <button class="ctaslim" id="ftOk">atualizar fatura</button>
+   <button class="ctaslim" id="ftOk">salvar valor do banco</button>
    ${f.informada?'<button class="del" id="ftDel">remover fatura do mês</button>':'<div style="height:6px"></div>'}`);
   setTimeout(()=>{const el=document.getElementById('ftV');if(el){el.focus();el.select();}},80);
   const salvar=async v=>{
