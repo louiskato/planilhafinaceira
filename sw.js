@@ -1,7 +1,7 @@
 /* Service worker da versão desktop */
-const CACHE = 'financeira-web-v18';
+const CACHE = 'financeira-web-v19';
 const CASCA = ['/', '/index.html', '/manifest.json',
-  '/icons/icon-192.png', '/icons/icon-512.png',
+  '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CASCA).catch(()=>{})).then(()=>self.skipWaiting()));
