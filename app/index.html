@@ -112,6 +112,37 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--laranja);outlin
 .grp .sal{align-items:flex-start;padding-top:12px}
 .sal.pos,.sal.war,.sal.neg{background:none;border-left:3px solid;margin:5px 0}
 .grp .sal.pos,.grp .sal.war,.grp .sal.neg{margin:6px 0}
+.chk{position:absolute;top:0;right:0;width:26px;height:26px;background:#7FC77F;
+  clip-path:polygon(0 0,100% 0,100% 100%);color:#fff;font-size:11px;font-weight:800;line-height:1;
+  display:flex;justify-content:flex-end;align-items:flex-start;padding:3px 3px 0 0;pointer-events:none}
+[data-t=dark] .chk{background:#4E8A55}
+.row .d,.grp .d{position:relative}
+.dayate{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);
+  font-size:13.5px;color:var(--sub)}
+.dayate button{border:1.5px solid var(--line);background:none;border-radius:99px;padding:7px 12px;font-family:inherit;
+  font-size:13.5px;font-weight:600;color:var(--fg);cursor:pointer;white-space:nowrap}
+.dayate button.on{background:#7FC77F;border-color:#7FC77F;color:#10300F}
+/* "todas": um dia com todos os totais (ícone à esquerda, valor à direita) */
+.grp{grid-template-columns:46px minmax(0,1fr) 37%;border-bottom:1.5px solid var(--line)}
+.grp .stack{min-width:0}
+.grp .sal{padding:0 10px 0 12px;min-width:0;white-space:nowrap}
+.grp .d{flex-direction:column;align-items:center;justify-content:flex-start;padding-top:9px;gap:0}
+.grp .d b{font-size:17px;font-weight:600;color:var(--fg);line-height:1.2}
+.grp .d small{font-size:10.5px;color:var(--sub);font-weight:500}
+.grp.wk .d{background:var(--wk);opacity:1}
+.grp .stack{border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.grp .stack>button{display:flex;align-items:center;gap:9px;width:100%;height:40px;padding:0 12px;background:none;border:none;
+  border-bottom:1px solid var(--line);font-family:inherit;color:var(--fg);cursor:pointer;text-align:left}
+.grp .stack>button:last-child{border-bottom:none}
+.grp .stack>button:active{background:var(--wk)}
+.grp .stack .dot{width:22px;height:22px;font-size:11px}
+.grp .stack .dot.zz{background:var(--wk)!important;color:var(--sub)!important;border:1px solid var(--line)!important}
+.grp .stack .num{margin-left:auto;font-size:15px;font-weight:500;white-space:nowrap}
+.grp .stack .num.z{color:var(--sub);opacity:.5;font-weight:400}
+.grp .stack .nm{font-size:11.5px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.grp .sal{font-size:16px}
+.grp.hj .d{box-shadow:inset 3px 0 0 var(--laranja)}
+.grp.hj .d b{color:var(--laranja)}
 .sal.pos{color:var(--ok);border-color:var(--ok)}
 .sal.war{color:var(--warn);border-color:var(--warn)}
 .sal.neg{color:var(--bad);border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent)}
@@ -591,6 +622,7 @@ section[id^=s-]{animation:fade .22s var(--e)}
   </div>
   <div class="daysel"><button class="pill" id="dayPill"><span class="dot d-diario" id="dpd">D</span>
     <span id="dpt">diários</span><span class="cv">▼</span></button></div>
+  <div class="dayate" id="dayAte"></div>
   <div id="dayBody" style="flex:1;display:flex;flex-direction:column"></div>
 </div>
 
@@ -865,6 +897,11 @@ async function sbCarregarAuxiliares(){
   PREV = (prev.data||[]).map(p => ({ id:p.id, n:p.nome, v:Number(p.valor_mensal), tagId:p.tag_id||null }));
   PREVDIV = pref.data?.previsao_divisor ?? 30;
   VENC = pref.data?.venc_fatura ?? null;
+  {
+    let local=null; try{ local=localStorage.getItem('atualizadoAte')||null; }catch(e){}
+    _ateNoBanco = !pref.data || ('atualizado_ate' in pref.data);
+    ATUALIZADO = (pref.data && pref.data.atualizado_ate) ? String(pref.data.atualizado_ate).slice(0,10) : local;
+  }
   META = { valor: pref.data?.meta_patrimonio!=null ? Number(pref.data.meta_patrimonio) : null,
            prazo: pref.data?.meta_patrimonio_prazo ? String(pref.data.meta_patrimonio_prazo).slice(0,7) : null };
   METAS = _metasDe(metasP.data, metasP.error);
@@ -1071,6 +1108,39 @@ async function garantirTagCartao(c){
   }
   return id;
 }
+/* ── ATUALIZADO ATÉ: até que dia a planilha foi conferida ─────────
+   Guardado em preferencias.atualizado_ate (vale em todos os aparelhos).
+   Sem a coluna no banco, fica só neste aparelho (localStorage).
+   ─────────────────────────────────────────────────────────────── */
+let ATUALIZADO = null, _ateNoBanco = true;     // 'YYYY-MM-DD' ou null
+const _dataStr = (y,m,d) => `${y}-${_pad(m)}-${_pad(d)}`;
+const atualizadoAte = (y,m,d) => !!ATUALIZADO && _dataStr(y,m,d) <= ATUALIZADO;
+function rotuloAtualizado(){
+  if(!ATUALIZADO) return null;
+  const [y,m,d] = ATUALIZADO.split('-').map(Number); return `${d}/${_pad(m)}`;
+}
+async function sbSalvarAtualizado(dataStr){
+  ATUALIZADO = dataStr || null;
+  try{ localStorage.setItem('atualizadoAte', ATUALIZADO||''); }catch(e){}
+  if(!_ateNoBanco) return 'local';
+  const r = await SB.from('preferencias').upsert({ user_id: await uidAtual(), atualizado_ate: ATUALIZADO },
+    { onConflict:'user_id' });
+  if(r.error){
+    if(/atualizado_ate/.test(r.error.message||'')){ _ateNoBanco=false; return 'local'; }
+    throw r.error;
+  }
+  return 'banco';
+}
+/* marca o dia (ou, se ele já é o marcado, volta a marca para o dia anterior) */
+async function alternarAtualizado(y,m,d){
+  const alvo = _dataStr(y,m,d);
+  let nova = alvo;
+  if(ATUALIZADO === alvo){ const ant = new Date(y,m-1,d-1); nova = _dataStr(ant.getFullYear(),ant.getMonth()+1,ant.getDate()); }
+  const onde = await sbSalvarAtualizado(nova);
+  const [ny,nm,nd] = nova.split('-').map(Number);
+  toast(`planilha atualizada até ${nd}/${_pad(nm)}`+(onde==='local'?' (só neste aparelho: rode atualizado_ate.sql)':''));
+}
+
 /* ── PATRIMÔNIO: META + GRÁFICO DE EVOLUÇÃO ─────────────────────
    Meta única com prazo (preferencias.meta_patrimonio / meta_patrimonio_prazo).
    ─────────────────────────────────────────────────────────────── */
@@ -1475,7 +1545,11 @@ const CORES=[['cinza','#6B6B6B'],['azul','#4F6E9E'],['amarelo','#7E6A18'],['verd
   ['vermelho','#A94442'],['roxo','#5F4E8E'],['rosa','#9E5A70'],['marrom','#7A5B3A']];
 const AREAS=['saldos','performance','economizado','custo de vida','diário médio'];
 
-let ano=2026,mes=7,col='diario',dayIdx=21,dayCol='diario';
+const DOW=['dom','seg','ter','qua','qui','sex','sáb'];
+const dow=(y,m,d)=>new Date(y,m-1,d).getDay();
+let ano=2026,mes=7,dayIdx=21,dayCol='diario';
+// visão da lista: "todas" por padrão; a escolha fica salva no aparelho
+let col=(()=>{try{const v=localStorage.getItem('colMob');return v&&(v==='todas'||ORD.includes(v))?v:'todas';}catch(e){return 'todas';}})();
 /* TAGS, CARTOES, PREV, PREVDIV, D vêm da camada Supabase */
 let form={};
 
@@ -1602,17 +1676,34 @@ function saldos(){
       return `<span class="dot ${soA?'d-assin':isPrev?'d-prev':'d-'+c}" style="${v===0?'opacity:.25':''}">${soA?'A':CAT[c].i}</span>${nm}
         <span class="num ${v===0?'z':''} ${isPrev?'prevtag':''} ${soA?'vprev':''}">${v===0?'—':rs(v)}</span>`;};
     if(col==='todas'){
-      return `<div class="grp ${cls}" data-i="${i}"><div class="d">${x.d}</div>
-        <div class="stack">${ORD.map(c=>`<div>${cellVal(c)}</div>`).join('')}</div>
-        <div class="sal num ${fx(x.saldo,r)}">${rs(x.saldo)}</div></div>`;}
-    return `<div class="row ${cls}" data-i="${i}"><div class="d">${x.d}</div>
+      // cada tipo numa linha: ícone à esquerda, valor à direita (zero fica apagado)
+      const linha=c=>{
+        const isPrev=c==='diario'&&x[c]===0&&x.prev>0;
+        const prevs=(x.mov||[]).filter(m=>m.t===c&&m.previsto);
+        const vA=prevs.reduce((a,m)=>a+m.v,0),soA=x[c]===0&&vA>0;
+        const v=isPrev?x.prev:(soA?vA:x[c]);
+        const reais=(x.mov||[]).filter(m=>m.t===c&&!m.previsto);
+        const nm=reais.length===1&&reais[0].desc?reais[0].desc:(soA&&prevs.length===1?prevs[0].desc:'');
+        return `<button data-i="${i}" data-c="${c}" aria-label="${CAT[c].n} dia ${x.d}">
+          <span class="dot ${v===0?'zz':soA?'d-assin':isPrev?'d-prev':'d-'+c}">${soA?'A':CAT[c].i}</span>
+          <span class="nm">${v?nm:''}</span>
+          <span class="num ${v===0?'z':''} ${isPrev?'prevtag':''} ${soA?'vprev':''}">${rs(v)}</span></button>`;};
+      return `<div class="grp ${cls}"><div class="d" data-dia="${i}">${atualizadoAte(ano,mes,x.d)?'<span class="chk">✓</span>':''}<b>${x.d}</b><small>${DOW[dow(ano,mes,x.d)]}</small></div>
+        <div class="stack">${ORD.map(linha).join('')}</div>
+        <div class="sal num ${fx(x.saldo,r)}" data-dia="${i}">${rs(x.saldo)}</div></div>`;}
+    return `<div class="row ${cls}" data-i="${i}"><div class="d">${atualizadoAte(ano,mes,x.d)?'<span class="chk">✓</span>':''}${x.d}</div>
       <div class="val">${cellVal(col)}</div>
       <div class="sal num ${fx(x.saldo,r)}">${rs(x.saldo)}</div></div>`;
   }).join('');
   const pd=document.getElementById('pd'),pt=document.getElementById('pt');
   if(col==='todas'){pd.className='dot d-todas';pd.textContent='⁘';pt.textContent='todas';}
   else{pd.className='dot d-'+col;pd.textContent=CAT[col].i;pt.textContent=CAT[col].n;}
-  box.querySelectorAll('[data-i]').forEach(el=>el.onclick=()=>openDay(+el.dataset.i));
+  box.querySelectorAll('.row[data-i]').forEach(el=>el.onclick=()=>openDay(+el.dataset.i));
+  // "todas": tocar numa linha abre o dia já filtrado naquele tipo; no dia ou no saldo, o dia inteiro
+  box.querySelectorAll('.grp .stack button').forEach(b=>b.onclick=()=>{
+    dayIdx=+b.dataset.i;dayCol=b.dataset.c;renderDay();open_('fsDay');});
+  box.querySelectorAll('.grp [data-dia]').forEach(el=>el.onclick=()=>{
+    dayIdx=+el.dataset.dia;dayCol='todas';renderDay();open_('fsDay');});
 }
 function pickCol(cb){
   sheet(`<div class="shh"><h2>mostrar</h2><button class="x" onclick="closeSheet()">✕</button></div>`+
@@ -1658,6 +1749,12 @@ function renderDay(){
   const dpd=document.getElementById('dpd'),dpt=document.getElementById('dpt');
   if(dayCol==='todas'){dpd.className='dot d-todas';dpd.textContent='⁘';dpt.textContent='todas';}
   else{dpd.className='dot d-'+dayCol;dpd.textContent=CAT[dayCol].i;dpt.textContent=CAT[dayCol].n;}
+  // marcador "planilha atualizada até aqui"
+  const ate=document.getElementById('dayAte'),marcado=ATUALIZADO===_dataStr(ano,mes,x.d),feito=atualizadoAte(ano,mes,x.d);
+  ate.innerHTML=`<span>${ATUALIZADO?`planilha atualizada até <b style="color:var(--fg)">${rotuloAtualizado()}</b>`:'marque até que dia você já lançou tudo'}</span>
+    <button id="dayChk" class="${feito?'on':''}">${marcado?'✓ desmarcar':feito?'✓ atualizado':'✓ atualizada até aqui'}</button>`;
+  document.getElementById('dayChk').onclick=async()=>{
+    try{ await alternarAtualizado(ano,mes,x.d); renderDay(); saldos(); }catch(e){ toast('erro: '+e.message); }};
   const lista=(x.mov||[]).map((m,j)=>({...m,j})).filter(m=>dayCol==='todas'||m.t===dayCol);
   const body=document.getElementById('dayBody');
   if(!lista.length){
@@ -2606,7 +2703,6 @@ function abreSelecMes({ano:ay, mes:am, selVal, minIdx, titulo, onPick}){
 }
 
 function abreCalendario({ano:ay, mes:am, diaSel, titulo, onPick}){
-  const DOW=['dom','seg','ter','qua','qui','sex','sáb'];
   let vy=ay, vm=am;
   function desenha(){
     const primeiroDiaSemana=new Date(vy,vm-1,1).getDay();
@@ -2709,7 +2805,7 @@ function ligarEventos(){
   document.querySelectorAll('.tb button[data-t]').forEach(b=>b.onclick=()=>aba(b.dataset.t));
   document.getElementById('fab').onclick=()=>pickTipo(c=>novo(c));
   // saldos
-  document.getElementById('pill').onclick=()=>pickCol(c=>{col=c;saldos();});
+  document.getElementById('pill').onclick=()=>pickCol(c=>{col=c;try{localStorage.setItem('colMob',c);}catch(e){}saldos();});
   // dia
   document.getElementById('dayPrev').onclick=()=>{if(dayIdx>0){dayIdx--;renderDay();}};
   document.getElementById('dayNext').onclick=()=>{if(dayIdx<M().dias.length-1){dayIdx++;renderDay();}};

@@ -96,6 +96,13 @@ Rode `cartoes_metas.sql` no SQL Editor (uma vez).
   avançadas* (celular), cada área pode ser *ignorar* ou *calcular*: saldos,
   performance, economizado, custo de vida e diário médio.
 
+## Planilha atualizada até
+
+Rode `atualizado_ate.sql` no SQL Editor (uma vez). Ao abrir um dia, use
+**✓ atualizada até aqui** para marcar até onde tudo já foi lançado: os dias
+até essa data ganham um ✓ verde no canto. Tocar de novo no dia marcado
+volta a marca para o dia anterior. Vale no celular e no computador.
+
 ## Segurança
 
 A chave anon é pública por natureza — quem protege os dados é o RLS,
